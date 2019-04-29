@@ -52,7 +52,7 @@ def get_ec2_pricing(instance_type, location):
         response = response[key]['priceDimensions']
         key = response.keys()[0]
         response = response[key]['pricePerUnit']['USD']
-        EC2_PRICE[location][instance_type] = float(response) * 24;
+        EC2_PRICE[location][instance_type] = float(response);
         return EC2_PRICE[location][instance_type];
 
     except:
@@ -131,7 +131,7 @@ def cost_calculation():
     EC2_PRICE = {}
     EBS_PRICE = {}
 
-    print (datetime.utcnow().strftime('%Y-%m-%d %H:%M:%S') + ': ' + 'EC2 Cost Calculation(For 24 Hours) Started')
+    print (datetime.utcnow().strftime('%Y-%m-%d %H:%M:%S') + ': ' + 'EC2 Cost Calculation(For Hour) Started')
     print (datetime.utcnow().strftime('%Y-%m-%d %H:%M:%S') + ': ' + 'REGION:' + REGION)
     print (datetime.utcnow().strftime('%Y-%m-%d %H:%M:%S') + ': ' + 'REGION NAME:' + REGION_NAME)
     print (datetime.utcnow().strftime('%Y-%m-%d %H:%M:%S') + ': ' + 'VPC ID:' + VPC_ID)
@@ -162,9 +162,9 @@ def cost_calculation():
         total_instance_cost = total_instance_cost + instance_cost
 
     print datetime.utcnow().strftime('%Y-%m-%d %H:%M:%S') + ': ' + 'Processed ' + str(instance_count) + ' Instances'
-    print 'Total Instance Cost(For 24 Hours) : $' + str(total_instance_cost)
-    print 'Total Volume Cost(For 24 Hours) : $' + str(total_volume_cost)
-    print 'Total Cost(For 24 Hours) : $' + str(total_instance_cost + total_volume_cost)
+    print 'Total Instance Cost(For Hour) : $' + str(total_instance_cost)
+    print 'Total Volume Cost(For Hour) : $' + str(total_volume_cost)
+    print 'Total Cost(For Hour) : $' + str(total_instance_cost + total_volume_cost)
     end = time.time()
     print datetime.utcnow().strftime('%Y-%m-%d %H:%M:%S') + ': ' + 'EC2 Cost Calculation Ended. Total Execution Time is ' + str(end - start) + ' Seconds'
 
