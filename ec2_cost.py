@@ -6,6 +6,9 @@ from datetime import datetime
 import time
 import traceback
 
+config_1 = cp.RawConfigParser()
+config_1.read(os.path.dirname(os.path.abspath(__file__))+'/config.cfg')
+
 REGION = 'us-east-2'
 REGION_NAME = 'US East (Ohio)'
 ENVIRONMENT = 'glp1'
@@ -123,7 +126,7 @@ def get_volume_cost(instance, location):
         cost = cost + get_ebs_pricing(volume.id, location)
     return cost
 
-def cost_calculation():
+def ec2_cost_calculation():
     global ec2_resource, REGION, REGION_NAME, VPC_ID, EC2_PRICE, EBS_PRICE
     ############################################INSTANCES AND IT'S IMPORTANT DATA(Filtered By Name Tag - mongo, cass) ARE RETRIEVED HERE###########################################################
     start = time.time()
@@ -131,7 +134,7 @@ def cost_calculation():
     EC2_PRICE = {}
     EBS_PRICE = {}
 
-    print (datetime.utcnow().strftime('%Y-%m-%d %H:%M:%S') + ': ' + 'EC2 Cost Calculation(For Hour) Started')
+    print (datetime.utcnow().strftime('%Y-%m-%d %H:%M:%S') + ': ' + 'EC2 Cost Calculation(For Hours) Started')
     print (datetime.utcnow().strftime('%Y-%m-%d %H:%M:%S') + ': ' + 'REGION:' + REGION)
     print (datetime.utcnow().strftime('%Y-%m-%d %H:%M:%S') + ': ' + 'REGION NAME:' + REGION_NAME)
     print (datetime.utcnow().strftime('%Y-%m-%d %H:%M:%S') + ': ' + 'VPC ID:' + VPC_ID)
@@ -171,4 +174,4 @@ def cost_calculation():
     return 0
 
 
-cost_calculation()
+
