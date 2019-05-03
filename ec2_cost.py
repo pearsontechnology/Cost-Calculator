@@ -21,6 +21,9 @@ EBS_PRICE = {}
 ec2_resource = boto3.resource('ec2', region_name=REGION)
 pricing = boto3.client('pricing', region_name='us-east-1') # Pricing doesn't depends on provided region here 
 
+today = datetime.utcnow()
+timestamp_today = time.mktime(today.timetuple())
+
 
 ##### Get the Price of Instance (OnDemand). Example: get_ec2_pricing('t2.nano', 'US East (N. Virginia)') - Price calculated for 1 day
 def get_ec2_pricing(instance_type, location):
@@ -126,7 +129,7 @@ def get_volume_cost(instance, location):
         cost = cost + get_ebs_pricing(volume.id, location)
     return cost
 
-def ec2_cost_calculation():
+def ec2_cost_calculation(role):
     global ec2_resource, REGION, REGION_NAME, VPC_ID, EC2_PRICE, EBS_PRICE
     ############################################INSTANCES AND IT'S IMPORTANT DATA(Filtered By Name Tag - mongo, cass) ARE RETRIEVED HERE###########################################################
     start = time.time()
@@ -143,7 +146,8 @@ def ec2_cost_calculation():
         Filters=[
             {'Name': 'vpc-id', 'Values': [VPC_ID]},   # If filtering by tag, vpc id is not required
             {'Name': 'tag:Environment', 'Values': [ENVIRONMENT]},  # if filtering by vpc id, environment and environment type not required
-            {'Name': 'tag:EnvironmentType', 'Values': [ENVIRONMENT_TYPE]}
+            {'Name': 'tag:EnvironmentType', 'Values': [ENVIRONMENT_TYPE]},
+            {'Name': 'tag:Role', 'Values': role}
         ]
     )
 
@@ -171,7 +175,43 @@ def ec2_cost_calculation():
     end = time.time()
     print datetime.utcnow().strftime('%Y-%m-%d %H:%M:%S') + ': ' + 'EC2 Cost Calculation Ended. Total Execution Time is ' + str(end - start) + ' Seconds'
 
-    return 0
+    return total_instance_cost+total_volume_cost
 
 
+# Inserting into ec2 roles cost table
+def insert_ec2_role_cost(timestamp, date, cluster_name, role_name, role_cost):
+    global client
+    data = [
+        {
+            "measurement": "final_cluster_calculation",
+            "tags": {
+                "cluster_name": str(cluster_name),
+                "date": date
 
+            },
+            "fields": {
+                "role_name": role_name,
+                "role_cost": role_cost
+                #"Cost": cost
+
+            }
+        }
+    ]
+    try:
+        client.write_points(data)
+        print 'inserted event record: ' + str(timestamp)
+
+    except:
+        writeToFile("error-calc.log", "Error inserting data: " + str(cluster_name))
+        
+def ec2_main_calc():
+    roles = [cb, minion, stackstorm, etcd, consul]
+    total_ec2_cost = 0
+    for role in roles:
+        role_name = role
+        role_cost = ec2_cost_calculation(role)
+        insert_ec2_role_cost(time_today, today, ENVIRONMENT, role_name, role_cost)
+        total_ec2_cost += role_cost
+        print total_ec2_cost
+        return total_ec2_cost
+        
