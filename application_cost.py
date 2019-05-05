@@ -55,7 +55,7 @@ def pod_total_resource(pod):
     return (pod_cpu_usage,pod_memory_usage)
 
 
-#Calculate minion total compute resources
+#Calculate minion total available  compute resources
 def compute_total_minion_resources(corev1api):
     minion_total_cpu = 0
     minion_total_memory = 0
@@ -69,19 +69,42 @@ def compute_total_minion_resources(corev1api):
         print "Minion Total Resource Calculation Error (v1 -> listNodes) :" + e
     return (minion_total_cpu,minion_total_memory)
 
+
+app_cost_data = []
+total_cpu_used = 0
+total_memory_used = 0
+
+#ratio 50:50. as percentage
+CPU_RATIO = 50
+MEMORY_RATIO = 100 - CPU_RATIO
+
 try:
+
     api_responce_namespaces = v1.list_namespace()
     for namespace in api_responce_namespaces.items:
+
         namespace_name = namespace.metadata.name
+        namespace_pod_count = 0
         namespace_total_cpu_usage = 0
         namespace_total_memory_usage = 0
 
         api_responce_pod = v1.list_namespaced_pod(namespace_name)
+        
         for pod in api_responce_pod.items:
+            namespace_pod_count += 1
             total_pod_cpu,total_pod_memory = pod_total_resource(pod)
             namespace_total_cpu_usage += total_pod_cpu
             namespace_total_memory_usage += total_pod_memory
-        print(namespace_name,namespace_total_cpu_usage,namespace_total_memory_usage)
-except Exception as e:
-    print e
 
+        app_cost_data.append({
+            "namespace" : namespace_name,
+            "cpu_usage" : namespace_total_cpu_usage,
+            "memory_usage" : namespace_total_memory_usage,
+            "pod_count" : namespace_pod_count
+        })
+
+        total_cpu_used += namespace_total_cpu_usage
+        total_memory_used += namespace_total_memory_usage
+
+except Exception as e:
+    print e.message
