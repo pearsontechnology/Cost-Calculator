@@ -2,11 +2,39 @@
 import kubernetes
 from kubernetes import client, config
 from pprint import pprint
+import os
+from influxdb import InfluxDBClient
 
 config.load_kube_config()
 v1 = client.CoreV1Api()
 
+# Mock Cost. will be added EC2
 total_cluster_cost = 500
+
+HOST = os.environ['DATABASE_HOST'] if "DATABASE_HOST" in os.environ else "localhost"
+PORT = os.environ['DATABASE_PORT'] if "DATABASE_PORT" in os.environ else 8086
+USER = os.environ['DATABASE_USER'] if "DATABASE_USER" in os.environ else ""
+PASSWORD = os.environ['DATABASE_PASSWORD'] if "DATABASE_PASSWORD" in os.environ else ""
+DATABASE = os.environ['DATABASE_NAME'] if "DATABASE_NAME" in os.environ else "cost_db"
+
+# creating influx client
+influx_client = InfluxDBClient(HOST, PORT, USER, PASSWORD, DATABASE)
+
+
+def insert_cost_data(influx_client, app_cost_data):
+    data = []
+    for app in app_cost_data:
+        data.append({
+            "measurement": "application_cost",
+            "tags": {
+                "namespace": str(app["namespace"])
+            },
+            "fields": app
+        })
+    try:
+        influx_client.write_points(data)
+    except Exception as e:
+        print e
 
 
 
@@ -22,6 +50,8 @@ def memory_to_int(memory_str):
     return int_memory
 
 
+
+# convert cpu mi to number
 def cpu_mi_convert(cpu_str):
     cpu = 0
     if type(cpu_str) is int:
@@ -34,6 +64,8 @@ def cpu_mi_convert(cpu_str):
     return cpu
 
 
+
+# Goes through containers and calculated total pod resource usage
 def pod_total_resource(pod):
     pod_cpu_usage = 0
     pod_memory_usage = 0
@@ -74,6 +106,8 @@ def compute_total_minion_resources(corev1api):
     except Exception as e:
         print "Minion Total Resource Calculation Error (v1 -> listNodes) :" + e
     return (minion_total_cpu, minion_total_memory)
+
+# Main Procedure.
 
 
 app_cost_data = []
@@ -124,4 +158,4 @@ for app in app_cost_data:
     app.update({
         "app_cost": app_total_cost
     })
-pprint(app_cost_data)
+insert_cost_data(influx_client, app_cost_data)
