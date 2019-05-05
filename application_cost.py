@@ -35,20 +35,23 @@ def pod_total_resource(pod):
     pod_memory_usage  = 0
     default_cpu = "50m"
     default_memory = "100m"
-    for container in pod.spec.containers:
-        requests = container.resources.requests
-        if requests is None:
-            pod_cpu_usage += cpu_mi_convert(default_cpu)
-            pod_memory_usage += memory_to_int(default_memory)
-        else:
-            if "cpu" in requests:
-                pod_cpu_usage += cpu_mi_convert(requests["cpu"])
-            else:
+    try:
+        for container in pod.spec.containers:
+            requests = container.resources.requests
+            if requests is None:
                 pod_cpu_usage += cpu_mi_convert(default_cpu)
-            if "memory" in requests:
-                pod_memory_usage += memory_to_int(requests["memory"])
-            else:
                 pod_memory_usage += memory_to_int(default_memory)
+            else:
+                if "cpu" in requests:
+                    pod_cpu_usage += cpu_mi_convert(requests["cpu"])
+                else:
+                    pod_cpu_usage += cpu_mi_convert(default_cpu)
+                if "memory" in requests:
+                    pod_memory_usage += memory_to_int(requests["memory"])
+                else:
+                    pod_memory_usage += memory_to_int(default_memory)
+    except Exception as e:
+        print "Pod resource calculation error " + e.message
     return (pod_cpu_usage,pod_memory_usage)
 
 
@@ -63,7 +66,7 @@ def compute_total_minion_resources():
             minion_total_cpu += int(node.status.capacity["cpu"])
             minion_total_memory += memory_to_int(node.status.capacity["memory"])
     except Exception as e:
-        print e
+        print "Minion Total Resource Calculation Error (v1 -> listNodes) :" + e
     return (minion_total_cpu,minion_total_memory)
 
 try:
