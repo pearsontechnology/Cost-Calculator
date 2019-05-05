@@ -8,7 +8,7 @@ from influxdb import InfluxDBClient
 config.load_kube_config()
 v1 = client.CoreV1Api()
 
-# Mock Cost. will be added EC2
+# Mock Cost. will be added EC2 and non EC2
 total_cluster_cost = 500
 
 HOST = os.environ['DATABASE_HOST'] if "DATABASE_HOST" in os.environ else "localhost"
@@ -21,6 +21,8 @@ DATABASE = os.environ['DATABASE_NAME'] if "DATABASE_NAME" in os.environ else "co
 influx_client = InfluxDBClient(HOST, PORT, USER, PASSWORD, DATABASE)
 
 
+
+#strict typed insert into influxdb
 def insert_cost_data(influx_client, app_cost_data):
     data = []
     for app in app_cost_data:
@@ -29,12 +31,17 @@ def insert_cost_data(influx_client, app_cost_data):
             "tags": {
                 "namespace": str(app["namespace"])
             },
-            "fields": app
+            "fields": {
+                "cpu_usage": float(app["cpu_usage"]),
+                "memory_usage": float(app["memory_usage"]),
+                "pod_count": int(app["pod_count"]),
+                "app_cost": float(app["app_cost"])
+            }
         })
     try:
         influx_client.write_points(data)
     except Exception as e:
-        print e
+        print "Data Insert Error :" + e.message
 
 
 
@@ -158,4 +165,5 @@ for app in app_cost_data:
     app.update({
         "app_cost": app_total_cost
     })
+
 insert_cost_data(influx_client, app_cost_data)
