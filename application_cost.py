@@ -17,6 +17,9 @@ try:
     for node in api_responce.items:
         total_cpu += int(node.status.capacity["cpu"])
         memory_str = node.status.capacity["memory"]
-        total_memory += int(memory_str[0:len(memory_str) - 2])
+        if str.endswith(memory_str,"i") or str.endswith(memory_str,"b"):
+            total_memory += int(memory_str[0:len(memory_str) - 2])
+        else:
+            total_memory += int(memory_str[0,len(memory_str) - 1])
 except Exception as e:
     print e
