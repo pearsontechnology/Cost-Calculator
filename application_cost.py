@@ -26,7 +26,6 @@ def cpu_mi_convert(cpu_str):
     if "m" in cpu_str:
         cpu_int = cpu_str[0:len(cpu_str)-1]
         cpu = int(cpu_int) / 1000.0
-        print cpu
     else:
         cpu = int (cpu_str)
     return cpu
@@ -34,15 +33,22 @@ def cpu_mi_convert(cpu_str):
 def pod_total_resource(pod):
     pod_cpu_usage  = 0
     pod_memory_usage  = 0
+    default_cpu = "50m"
+    default_memory = "100m"
     for container in pod.spec.containers:
         requests = container.resources.requests
-        print requests
         if requests is None:
-            pod_cpu_usage += cpu_mi_convert("5m")
-            pod_memory_usage += memory_to_int("100M")
+            pod_cpu_usage += cpu_mi_convert(default_cpu)
+            pod_memory_usage += memory_to_int(default_memory)
         else:
-            pod_cpu_usage += cpu_mi_convert(requests["cpu"])
-            pod_memory_usage += memory_to_int(requests["memory"])
+            if "cpu" in requests:
+                pod_cpu_usage += cpu_mi_convert(requests["cpu"])
+            else:
+                pod_cpu_usage += cpu_mi_convert(default_cpu)
+            if "memory" in requests:
+                pod_memory_usage += memory_to_int(requests["memory"])
+            else:
+                pod_memory_usage += memory_to_int(default_memory)
     return (pod_cpu_usage,pod_memory_usage)
 
 
@@ -69,7 +75,12 @@ try:
 
         api_responce_pod = v1.list_namespaced_pod(namespace_name)
         for pod in api_responce_pod.items:
-            print pod_total_resource(pod)
+            total_pod_cpu,total_pod_memory = pod_total_resource(pod)
+            print pod.metadata.name
+            #namespace_total_cpu_usage += total_pod_cpu
+            #namespace_total_memory_usage += total_pod_memory
+            #print(namespace_name,pod.metadata.name,total_pod_cpu,total_pod_memory)
+        #print(namespace_name,namespace_total_cpu_usage,namespace_total_memory_usage)
 except Exception as e:
     print e
 
