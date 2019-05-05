@@ -53,18 +53,18 @@ def pod_total_resource(pod):
 
 
 #Calculate minion total compute resources
-total_cpu = 0
-total_memory = 0
-try:
-    #nodes = v1.list_node(label_selector="role=minion")
-    api_responce_nodes = v1.list_node(pretty=True,field_selector="metadata.name=minikube")
-    for node in api_responce_nodes.items:
-        total_cpu += int(node.status.capacity["cpu"])
-        total_memory += memory_to_int(node.status.capacity["memory"])
-except Exception as e:
-    print e
-
-print (total_cpu,total_memory)
+def compute_total_minion_resources():
+    minion_total_cpu = 0
+    minion_total_memory = 0
+    try:
+        #nodes = v1.list_node(label_selector="role=minion")
+        api_responce_nodes = v1.list_node(pretty=True,field_selector="metadata.name=minikube")
+        for node in api_responce_nodes.items:
+            minion_total_cpu += int(node.status.capacity["cpu"])
+            minion_total_memory += memory_to_int(node.status.capacity["memory"])
+    except Exception as e:
+        print e
+    return (minion_total_cpu,minion_total_memory)
 
 try:
     api_responce_namespaces = v1.list_namespace()
