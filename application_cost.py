@@ -34,7 +34,7 @@ def pod_total_resource(pod):
     pod_cpu_usage  = 0
     pod_memory_usage  = 0
     default_cpu = "50m"
-    default_memory = "100m"
+    default_memory = "100Mi"
     try:
         for container in pod.spec.containers:
             requests = container.resources.requests
@@ -56,12 +56,12 @@ def pod_total_resource(pod):
 
 
 #Calculate minion total compute resources
-def compute_total_minion_resources():
+def compute_total_minion_resources(corev1api):
     minion_total_cpu = 0
     minion_total_memory = 0
     try:
-        #nodes = v1.list_node(label_selector="role=minion")
-        api_responce_nodes = v1.list_node(pretty=True,field_selector="metadata.name=minikube")
+        #nodes = corev1api.list_node(label_selector="role=minion")
+        api_responce_nodes = corev1api.list_node(pretty=True,field_selector="metadata.name=minikube")
         for node in api_responce_nodes.items:
             minion_total_cpu += int(node.status.capacity["cpu"])
             minion_total_memory += memory_to_int(node.status.capacity["memory"])
@@ -79,11 +79,9 @@ try:
         api_responce_pod = v1.list_namespaced_pod(namespace_name)
         for pod in api_responce_pod.items:
             total_pod_cpu,total_pod_memory = pod_total_resource(pod)
-            print pod.metadata.name
-            #namespace_total_cpu_usage += total_pod_cpu
-            #namespace_total_memory_usage += total_pod_memory
-            #print(namespace_name,pod.metadata.name,total_pod_cpu,total_pod_memory)
-        #print(namespace_name,namespace_total_cpu_usage,namespace_total_memory_usage)
+            namespace_total_cpu_usage += total_pod_cpu
+            namespace_total_memory_usage += total_pod_memory
+        print(namespace_name,namespace_total_cpu_usage,namespace_total_memory_usage)
 except Exception as e:
     print e
 
