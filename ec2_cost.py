@@ -218,5 +218,5 @@ def ec2_main_calc():
         insert_ec2_role_cost(time_today, today, ENVIRONMENT, role_name, role_cost)
         total_ec2_cost += role_cost
         print total_ec2_cost
-        return total_ec2_cost
+    return total_ec2_cost
         
