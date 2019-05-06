@@ -10,10 +10,10 @@ import re
 config = cp.RawConfigParser()
 config.read(os.path.dirname(os.path.abspath(__file__)) + '/config.cfg')
 
-REGION = 'us-east-2'
-REGION_NAME = 'US East (Ohio)'
-ENVIRONMENT = 'glp1'
-ENVIRONMENT_TYPE = 'nft'
+REGION = config_1.get('regions', 'default')
+REGION_NAME = config_1.get('regions', REGION)
+ENVIRONMENT = os.environ['ENVIRONMENT']
+ENVIRONMENT_TYPE = os.environ['ENVIRONMENT_TYPE']
 # VPC_ID = 'vpc-ff8af197'
 
 today = datetime.utcnow()
