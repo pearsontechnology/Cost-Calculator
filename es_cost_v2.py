@@ -5,10 +5,10 @@ import time
 import re
 import traceback
 
-REGION = 'us-east-2'
-REGION_NAME = 'US East (Ohio)'
-ENVIRONMENT = 'glp1'
-ENVIRONMENT_TYPE = 'nft'
+REGION = config_1.get('regions', 'default')
+REGION_NAME = config_1.get('regions', REGION)
+ENVIRONMENT = os.environ['ENVIRONMENT']
+ENVIRONMENT_TYPE = os.environ['ENVIRONMENT_TYPE']
 
 pricing = boto3.client('pricing')
 es = boto3.client('es', region_name=REGION)
