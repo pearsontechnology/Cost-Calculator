@@ -7,7 +7,8 @@ from influxdb import InfluxDBClient
 from datetime import datetime
 import traceback
 
-config.load_kube_config()
+#using service account. binded with cluster role
+config.load_incluster_config()
 v1 = client.CoreV1Api()
 
 print (datetime.utcnow().strftime('%Y-%m-%d %H:%M:%S') +
