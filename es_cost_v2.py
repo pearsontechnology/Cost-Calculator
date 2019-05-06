@@ -55,51 +55,56 @@ def get_es_total_cost():
     print (datetime.utcnow().strftime('%Y-%m-%d %H:%M:%S') + ': ' + 'ENVIRONMENT:' + ENVIRONMENT)
     print (datetime.utcnow().strftime('%Y-%m-%d %H:%M:%S') + ': ' + 'ENVIRONMENT TYPE:' + ENVIRONMENT_TYPE)
     print
-    domain_names = es.list_domain_names()
-    # grep domains by environment and environment type
-    for domain in domain_names['DomainNames']:
-        exp_env = '\\b' + ENVIRONMENT + '\\b'
-        exp_ent_type = '\\b' + ENVIRONMENT_TYPE + '\\b'
-        domain_name = domain['DomainName']
-        if re.search(exp_env, domain_name) and re.search(exp_ent_type, domain_name):
-            domain_count = domain_count + 1
-            print domain_count, '.', domain_name
-            domain_info = es.describe_elasticsearch_domain(
-                DomainName=domain['DomainName']
-            )
-            es_config = domain_info['DomainStatus']['ElasticsearchClusterConfig']
-            # calculate master costs
-            if es_config['DedicatedMasterEnabled']:
-                master_count = es_config['DedicatedMasterCount']
-                master_type = es_config['DedicatedMasterType']
-                master_nodes_cost = float(get_es_instance_per_hour_price(master_type, REGION_NAME)) * int(master_count)
-                print 'Number of master nodes: ', master_count, '-', master_type
-                print 'Cost for master nodes: $', master_nodes_cost
+    try:
+        domain_names = es.list_domain_names()
+        # grep domains by environment and environment type
+        for domain in domain_names['DomainNames']:
+            exp_env = '\\b' + ENVIRONMENT + '\\b'
+            exp_ent_type = '\\b' + ENVIRONMENT_TYPE + '\\b'
+            domain_name = domain['DomainName']
+            if re.search(exp_env, domain_name) and re.search(exp_ent_type, domain_name):
+                domain_count = domain_count + 1
+                print domain_count, '.', domain_name
+                domain_info = es.describe_elasticsearch_domain(
+                    DomainName=domain['DomainName']
+                )
+                es_config = domain_info['DomainStatus']['ElasticsearchClusterConfig']
+                # calculate master costs
+                if es_config['DedicatedMasterEnabled']:
+                    master_count = es_config['DedicatedMasterCount']
+                    master_type = es_config['DedicatedMasterType']
+                    master_nodes_cost = float(get_es_instance_per_hour_price(master_type, REGION_NAME)) * int(
+                        master_count)
+                    print 'Number of master nodes: ', master_count, '-', master_type
+                    print 'Cost for master nodes: $', master_nodes_cost
 
-            # calculate data_node costs
-            minion_count = es_config['InstanceCount']
-            minion_type = es_config['InstanceType']
-            data_nodes_cost = float(get_es_instance_per_hour_price(minion_type, REGION_NAME)) * int(minion_count)
-            print 'Number of data nodes: ', minion_count, '-', minion_type
-            print 'Cost for data nodes: $', data_nodes_cost
+                # calculate data_node costs
+                minion_count = es_config['InstanceCount']
+                minion_type = es_config['InstanceType']
+                data_nodes_cost = float(get_es_instance_per_hour_price(minion_type, REGION_NAME)) * int(minion_count)
+                print 'Number of data nodes: ', minion_count, '-', minion_type
+                print 'Cost for data nodes: $', data_nodes_cost
 
-            if es_config['DedicatedMasterEnabled']:
-                total_node_count = master_count + minion_count
-                total_node_cost = master_nodes_cost + data_nodes_cost
-            else:
-                total_node_count = minion_count
-                total_node_cost = data_nodes_cost
+                if es_config['DedicatedMasterEnabled']:
+                    total_node_count = master_count + minion_count
+                    total_node_cost = master_nodes_cost + data_nodes_cost
+                else:
+                    total_node_count = minion_count
+                    total_node_cost = data_nodes_cost
 
-            total_es_cost = total_es_cost + total_node_cost
+                total_es_cost = total_es_cost + total_node_cost
 
-            print 'Total number of nodes in this ES domain: ', total_node_count
-            print 'Total cost of this ES domain: $', str(total_node_cost)
-            print
+                print 'Total number of nodes in this ES domain: ', total_node_count
+                print 'Total cost of this ES domain: $', str(total_node_cost)
+                print
 
-    print datetime.utcnow().strftime('%Y-%m-%d %H:%M:%S') + ': ' + 'Processed ' + str(domain_count) + ' Domains'
-    print 'Total ES Cost(For Hour) : $' + str(total_es_cost)
-    end = time.time()
-    print datetime.utcnow().strftime(
-        '%Y-%m-%d %H:%M:%S') + ': ' + 'ES Cost Calculation Ended. Total Execution Time is ' + str(
-        end - start) + ' Seconds'
-    return total_es_cost
+        print datetime.utcnow().strftime('%Y-%m-%d %H:%M:%S') + ': ' + 'Processed ' + str(domain_count) + ' Domains'
+        print 'Total ES Cost(For Hour) : $' + str(total_es_cost)
+        end = time.time()
+        print datetime.utcnow().strftime(
+            '%Y-%m-%d %H:%M:%S') + ': ' + 'ES Cost Calculation Ended. Total Execution Time is ' + str(
+            end - start) + ' Seconds'
+        return total_es_cost
+    except:
+        print (traceback.format_exc())
+        print datetime.utcnow().strftime('%Y-%m-%d %H:%M:%S') + ': ' + 'Error in Calculating Cost for ES'
