@@ -98,4 +98,3 @@ def get_es_total_cost():
     return total_es_cost
 
 
-get_es_total_cost()
