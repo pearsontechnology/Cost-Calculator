@@ -20,7 +20,7 @@ def filteringAndCalculation():
     mainProcedure()
 
 schedule.every().hour.at("00:30").do(filteringJOB) ### RUNS EVERY HOUR At @HOUR:30
-schedule.every().hour.at("00:00").do(ec2_cost_calculation) ### RUNS EVERY HOUR At @HOUR:00
+schedule.every().hour.at("00:00").do(cluster_costing) ### RUNS EVERY HOUR At @HOUR:00
 schedule.every().day.at("00:05").do(filteringAndCalculation) ### RUNS EVERY DAY At 00:05
 
 filteringAndCalculation()
