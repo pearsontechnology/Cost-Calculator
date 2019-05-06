@@ -90,4 +90,4 @@ def elb_cost():
         print (traceback.format_exc())
         print datetime.utcnow().strftime('%Y-%m-%d %H:%M:%S') + ': ' + 'Error in Calculating Cost for ELB'
 
-elb_cost()
+
