@@ -124,60 +124,60 @@ def compute_total_minion_resources(corev1api):
     return (minion_total_cpu, minion_total_memory)
 
 # Main Procedure.
-
-
-app_cost_data = []
-total_cpu_used = 0
-total_memory_used = 0
-
-# ratio 50:50. as percentage
-CPU_RATIO = 50
-MEMORY_RATIO = 100 - CPU_RATIO
-
-try:
-
-    api_responce_namespaces = v1.list_namespace()
-    for namespace in api_responce_namespaces.items:
-
-        namespace_name = namespace.metadata.name
-        namespace_pod_count = 0
-        namespace_total_cpu_usage = 0
-        namespace_total_memory_usage = 0
-
-        api_responce_pod = v1.list_namespaced_pod(namespace_name)
-
-        for pod in api_responce_pod.items:
-            namespace_pod_count += 1
-            total_pod_cpu, total_pod_memory = pod_total_resource(pod)
-            namespace_total_cpu_usage += total_pod_cpu
-            namespace_total_memory_usage += total_pod_memory
-
-        app_cost_data.append({
-            "namespace": namespace_name,
-            "cpu_usage": namespace_total_cpu_usage,
-            "memory_usage": namespace_total_memory_usage,
-            "pod_count": namespace_pod_count
+def main_procedure():
+    app_cost_data = []
+    total_cpu_used = 0
+    total_memory_used = 0
+    
+    # ratio 50:50. as percentage
+    CPU_RATIO = 50
+    MEMORY_RATIO = 100 - CPU_RATIO
+    
+    try:
+    
+        api_responce_namespaces = v1.list_namespace()
+        for namespace in api_responce_namespaces.items:
+        
+            namespace_name = namespace.metadata.name
+            namespace_pod_count = 0
+            namespace_total_cpu_usage = 0
+            namespace_total_memory_usage = 0
+    
+            api_responce_pod = v1.list_namespaced_pod(namespace_name)
+    
+            for pod in api_responce_pod.items:
+                namespace_pod_count += 1
+                total_pod_cpu, total_pod_memory = pod_total_resource(pod)
+                namespace_total_cpu_usage += total_pod_cpu
+                namespace_total_memory_usage += total_pod_memory
+    
+            app_cost_data.append({
+                "namespace": namespace_name,
+                "cpu_usage": namespace_total_cpu_usage,
+                "memory_usage": namespace_total_memory_usage,
+                "pod_count": namespace_pod_count
+            })
+    
+            total_cpu_used += namespace_total_cpu_usage
+            total_memory_used += namespace_total_memory_usage
+    
+    except Exception as e:
+        print (traceback.format_exc())
+        print datetime.utcnow().strftime('%Y-%m-%d %H:%M:%S') + ': ' + \
+            'Namespace Resource Calculatoion Error'
+    
+    for app in app_cost_data:
+        app_cpu_cost = (CPU_RATIO/100.0 * total_cluster_cost) * \
+            (float(app["cpu_usage"]) / float(total_cpu_used))
+        app_memory_cost = (MEMORY_RATIO/100.0 * total_cluster_cost) * \
+            (float(app["memory_usage"]) / float(total_memory_used))
+        app_total_cost = app_cpu_cost + app_memory_cost
+        app.update({
+            "app_cost": app_total_cost
         })
-
-        total_cpu_used += namespace_total_cpu_usage
-        total_memory_used += namespace_total_memory_usage
-
-except Exception as e:
-    print (traceback.format_exc())
-    print datetime.utcnow().strftime('%Y-%m-%d %H:%M:%S') + ': ' + \
-        'Namespace Resource Calculatoion Error'
-
-for app in app_cost_data:
-    app_cpu_cost = (CPU_RATIO/100.0 * total_cluster_cost) * \
-        (float(app["cpu_usage"]) / float(total_cpu_used))
-    app_memory_cost = (MEMORY_RATIO/100.0 * total_cluster_cost) * \
-        (float(app["memory_usage"]) / float(total_memory_used))
-    app_total_cost = app_cpu_cost + app_memory_cost
-    app.update({
-        "app_cost": app_total_cost
-    })
-
-insert_cost_data(influx_client, app_cost_data)
-
-print (datetime.utcnow().strftime('%Y-%m-%d %H:%M:%S') +
-       ': ' + 'Cost Calculation(For This Hour) Ended')
+    
+    insert_cost_data(influx_client, app_cost_data)
+    
+    print (datetime.utcnow().strftime('%Y-%m-%d %H:%M:%S') +
+           ': ' + 'Cost Calculation(For This Hour) Ended')
+    
