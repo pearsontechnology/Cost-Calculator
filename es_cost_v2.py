@@ -3,6 +3,7 @@ import json
 from datetime import datetime
 import time
 import re
+import traceback
 
 REGION = 'us-east-2'
 REGION_NAME = 'US East (Ohio)'
@@ -15,22 +16,28 @@ es = boto3.client('es', region_name=REGION)
 
 # Example: get_es_instance_per_hour_price('t2.micro.elasticsearch','US East (N. Virginia)')
 def get_es_instance_per_hour_price(instance_type, region):
-    es_instances_prices = pricing.get_products(
-        ServiceCode='AmazonES',
-        Filters=[
-            {'Type': 'TERM_MATCH', 'Field': 'location', 'Value': region},
-            {'Type': 'TERM_MATCH', 'Field': 'productFamily', 'Value': 'Elastic Search Instance'},
-            {'Type': 'TERM_MATCH', 'Field': 'instanceType', 'Value': instance_type},
-        ]
-    )
+    try:
+        es_instances_prices = pricing.get_products(
+            ServiceCode='AmazonES',
+            Filters=[
+                {'Type': 'TERM_MATCH', 'Field': 'location', 'Value': region},
+                {'Type': 'TERM_MATCH', 'Field': 'productFamily', 'Value': 'Elastic Search Instance'},
+                {'Type': 'TERM_MATCH', 'Field': 'instanceType', 'Value': instance_type},
+            ]
+        )
 
-    resp = json.loads(es_instances_prices['PriceList'][0])['terms']['OnDemand']
-    key = resp.keys()[0]
-    resp = resp[key]['priceDimensions']
-    key = resp.keys()[0]
-    es_instance_price_per_hour = resp[key]['pricePerUnit']['USD']
-    # print "Per hour cost rate: ",es_instance_price_per_hour
-    return es_instance_price_per_hour
+        resp = json.loads(es_instances_prices['PriceList'][0])['terms']['OnDemand']
+        key = resp.keys()[0]
+        resp = resp[key]['priceDimensions']
+        key = resp.keys()[0]
+        es_instance_price_per_hour = resp[key]['pricePerUnit']['USD']
+        # print "Per hour cost rate: ",es_instance_price_per_hour
+        return es_instance_price_per_hour
+    except:
+        print (traceback.format_exc())
+        print (datetime.utcnow().strftime(
+            '%Y-%m-%d %H:%M:%S') + ': ' + 'Error in Getting Price of the instance :' + instance_type + ', Region :' + region)
+        return 0
 
 
 # get_es_instance_per_hour_price('r3.8xlarge.elasticsearch','US East (N. Virginia)')
@@ -96,5 +103,3 @@ def get_es_total_cost():
         '%Y-%m-%d %H:%M:%S') + ': ' + 'ES Cost Calculation Ended. Total Execution Time is ' + str(
         end - start) + ' Seconds'
     return total_es_cost
-
-
