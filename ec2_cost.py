@@ -205,7 +205,7 @@ def insert_ec2_role_cost(timestamp, date, cluster_name, role_name, role_cost):
         writeToFile("error-calc.log", "Error inserting data: " + str(cluster_name))
         
 def ec2_main_calc():
-    roles = [cb, minion, stackstorm, etcd, consul]
+    roles = [master, minion, stackstorm, etcd, consul]
     total_ec2_cost = 0
     for role in roles:
         role_name = role
