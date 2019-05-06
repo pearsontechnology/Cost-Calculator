@@ -161,7 +161,7 @@ def main_procedure():
             total_cpu_used += namespace_total_cpu_usage
             total_memory_used += namespace_total_memory_usage
     
-    except Exception as e:
+    except:
         print (traceback.format_exc())
         print datetime.utcnow().strftime('%Y-%m-%d %H:%M:%S') + ': ' + \
             'Namespace Resource Calculatoion Error'
