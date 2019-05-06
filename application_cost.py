@@ -4,9 +4,13 @@ from kubernetes import client, config
 from pprint import pprint
 import os
 from influxdb import InfluxDBClient
+from datetime import datetime
+import traceback
 
 config.load_kube_config()
 v1 = client.CoreV1Api()
+
+print (datetime.utcnow().strftime('%Y-%m-%d %H:%M:%S') + ': ' + 'Cost Calculation(For This Hour) Started')
 
 # Mock Cost. will be added EC2 and non EC2
 total_cluster_cost = 500
@@ -40,8 +44,10 @@ def insert_cost_data(influx_client, app_cost_data):
         })
     try:
         influx_client.write_points(data)
-    except Exception as e:
-        print "Data Insert Error :" + e.message
+        print (datetime.utcnow().strftime('%Y-%m-%d %H:%M:%S') + ': ' + 'Cost Calculation(For This Hour) Inserted Successfully')
+    except:
+        print (traceback.format_exc())
+        print datetime.utcnow().strftime('%Y-%m-%d %H:%M:%S') + ': ' + 'Data Insert Error '
 
 
 
@@ -93,8 +99,9 @@ def pod_total_resource(pod):
                     pod_memory_usage += memory_to_int(requests["memory"])
                 else:
                     pod_memory_usage += memory_to_int(default_memory)
-    except Exception as e:
-        print "Pod resource calculation error " + e.message
+    except:
+        print (traceback.format_exc())
+        print datetime.utcnow().strftime('%Y-%m-%d %H:%M:%S') + ': ' + 'Pod resource calculation error '
     return (pod_cpu_usage, pod_memory_usage)
 
 
@@ -110,8 +117,9 @@ def compute_total_minion_resources(corev1api):
             minion_total_cpu += int(node.status.capacity["cpu"])
             minion_total_memory += memory_to_int(
                 node.status.capacity["memory"])
-    except Exception as e:
-        print "Minion Total Resource Calculation Error (v1 -> listNodes) :" + e
+    except:
+        print (traceback.format_exc())
+        print datetime.utcnow().strftime('%Y-%m-%d %H:%M:%S') + ': ' + 'Minion Total Resource Calculation Error (v1 -> listNodes)'
     return (minion_total_cpu, minion_total_memory)
 
 # Main Procedure.
@@ -154,7 +162,8 @@ try:
         total_memory_used += namespace_total_memory_usage
 
 except Exception as e:
-    print "Namespace Resource Calculatoion Error :" + e.message
+    print (traceback.format_exc())
+    print datetime.utcnow().strftime('%Y-%m-%d %H:%M:%S') + ': ' + 'Namespace Resource Calculatoion Error'
 
 for app in app_cost_data:
     app_cpu_cost = (CPU_RATIO/100.0 * total_cluster_cost) * \
@@ -167,3 +176,5 @@ for app in app_cost_data:
     })
 
 insert_cost_data(influx_client, app_cost_data)
+
+print (datetime.utcnow().strftime('%Y-%m-%d %H:%M:%S') + ': ' + 'Cost Calculation(For This Hour) Ended')
