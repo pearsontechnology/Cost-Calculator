@@ -114,6 +114,5 @@ def rds_cost():
         end - start) + ' Seconds'
 
 
-rds_cost()
 
 # get_rds_pricing('db.r4.4xlarge', 'US East (Ohio)', 'Single-AZ', 'Amazon Neptune')
