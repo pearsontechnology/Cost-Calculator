@@ -1,18 +1,23 @@
 # -*- coding: utf-8 -*-
-import ConfigParser as cp
 import boto3
+import ConfigParser as cp
+from influxdb import InfluxDBClient
 import json
+from kubernetes import client, config, watch
+import os
 from datetime import datetime
+import schedule
+import requests
 import time
-import traceback
+import kubernetes
 
 config_1 = cp.RawConfigParser()
 config_1.read(os.path.dirname(os.path.abspath(__file__))+'/config.cfg')
 
-REGION = 'us-east-2'
-REGION_NAME = 'US East (Ohio)'
-ENVIRONMENT = 'glp1'
-ENVIRONMENT_TYPE = 'pre'
+REGION = config_1.get('regions', 'default')
+REGION_NAME = config_1.get('regions', REGION)
+ENVIRONMENT = os.environ['ENVIRONMENT']
+ENVIRONMENT_TYPE = os.environ['ENVIRONMENT_TYPE']
 VPC_ID = 'vpc-ff8af197'
 
 EC2_PRICE = {}
@@ -205,7 +210,7 @@ def insert_ec2_role_cost(timestamp, date, cluster_name, role_name, role_cost):
         writeToFile("error-calc.log", "Error inserting data: " + str(cluster_name))
         
 def ec2_main_calc():
-    roles = [master, minion, stackstorm, etcd, consul]
+    roles = [master, k8-master, minion, k8-minion, stackstorm, etcd, consul]
     total_ec2_cost = 0
     for role in roles:
         role_name = role
