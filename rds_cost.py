@@ -12,11 +12,11 @@ import re
 # Note: This does not calculate DATA TRANSFER, STORAGE/IO, BACKUP STORAGE cost.
 # Note: This does not calculate DATA TRANSFER, STORAGE/IO, BACKUP STORAGE cost.
 
-REGION = 'us-east-2'
-REGION_NAME = 'US East (Ohio)'
+REGION = config_1.get('regions', 'default')
+REGION_NAME = config_1.get('regions', REGION)
+ENVIRONMENT = os.environ['ENVIRONMENT']
+ENVIRONMENT_TYPE = os.environ['ENVIRONMENT_TYPE']
 VPC_ID = 'vpc-ff8af197'
-ENVIRONMENT = 'glp1'
-ENVIRONMENT_TYPE = 'pre'
 
 client = boto3.client('rds', region_name=REGION)
 pricing = boto3.client('pricing', region_name='us-east-1')
