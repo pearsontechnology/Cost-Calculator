@@ -40,7 +40,7 @@ def insertFinalClusterCalc(timestamp, date, ENVIRONMENT, ec2_cost, rds_cost, elb
                 "ec2_cost": ec2_cost,
                 "rds_cost": rds_cost,
                 "elb_cost": elb_cost,
-                "es_cost": es_cost
+                "es_cost": es_cost,
                 "total_cost": total_cost
                 #"Cost": cost
 
@@ -60,5 +60,5 @@ def cluster_costing():
     cost_es = get_es_total_cost()
     cost_elb = elb_cost()
     cost_total = cost_ec2 + cost_elb+ cost_es + cost_rds
-
     insertFinalClusterCalc(timestamp_today, today, ENVIRONMENT, cost_ec2, cost_rds, cost_elb, cost_es, cost_total)
+    return cost_total
