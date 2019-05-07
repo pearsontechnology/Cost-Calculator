@@ -19,9 +19,11 @@ total_cluster_cost = 500
 
 HOST = os.environ['DATABASE_HOST'] if "DATABASE_HOST" in os.environ else "localhost"
 PORT = os.environ['DATABASE_PORT'] if "DATABASE_PORT" in os.environ else 8086
-USER = os.environ['DATABASE_USER'] if "DATABASE_USER" in os.environ else ""
+USER = os.environ['DATABASE_USER'] if "DATABASE_USER" in os.environ else "cost_admin"
 PASSWORD = os.environ['DATABASE_PASSWORD'] if "DATABASE_PASSWORD" in os.environ else ""
 DATABASE = os.environ['DATABASE_NAME'] if "DATABASE_NAME" in os.environ else "cost_db"
+
+print(HOST,PORT,USER,PASSWORD,DATABASE)
 
 # creating influx client
 influx_client = InfluxDBClient(HOST, PORT, USER, PASSWORD, DATABASE)
@@ -176,9 +178,11 @@ def main_procedure():
         app.update({
             "app_cost": app_total_cost
         })
-    
+    print (datetime.utcnow().strftime('%Y-%m-%d %H:%M:%S') +
+           ': ' + 'Starting to Insert Data')
     insert_cost_data(influx_client, app_cost_data)
     
     print (datetime.utcnow().strftime('%Y-%m-%d %H:%M:%S') +
            ': ' + 'Cost Calculation(For This Hour) Ended')
+    return
     
