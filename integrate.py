@@ -17,13 +17,14 @@ from elb import elb_cost
 from es_cost_v2 import get_es_total_cost
 
 config_1 = cp.RawConfigParser()
-config_1.read(os.path.dirname(os.path.abspath(__file__))+'/config.cfg')
+config_1.read(os.path.dirname(os.path.abspath(__file__)) + '/config.cfg')
 
-REGION = config_1.get('regions', 'default')
+REGION = os.environ['REGION']
 REGION_NAME = config_1.get('regions', REGION)
 ENVIRONMENT = os.environ['ENVIRONMENT']
 ENVIRONMENT_TYPE = os.environ['ENVIRONMENT_TYPE']
 VPC_ID = 'vpc-ff8af197'
+
 
 # Inserting into final calculation table
 def insertFinalClusterCalc(timestamp, date, ENVIRONMENT, ec2_cost, rds_cost, elb_cost, es_cost, total_cost):
@@ -42,7 +43,7 @@ def insertFinalClusterCalc(timestamp, date, ENVIRONMENT, ec2_cost, rds_cost, elb
                 "elb_cost": elb_cost,
                 "es_cost": es_cost,
                 "total_cost": total_cost
-                #"Cost": cost
+                # "Cost": cost
 
             }
         }
@@ -54,11 +55,17 @@ def insertFinalClusterCalc(timestamp, date, ENVIRONMENT, ec2_cost, rds_cost, elb
     except:
         writeToFile("error-calc.log", "Error inserting data: " + str(ENVIRONMENT))
 
+
 def cluster_costing():
-    cost_ec2 = ec2_main_calc
+    cost_ec2 = ec2_main_calc()
     cost_rds = rds_cost()
     cost_es = get_es_total_cost()
     cost_elb = elb_cost()
-    cost_total = cost_ec2 + cost_elb+ cost_es + cost_rds
-    insertFinalClusterCalc(timestamp_today, today, ENVIRONMENT, cost_ec2, cost_rds, cost_elb, cost_es, cost_total)
+
+    print(cost_ec2,cost_rds,cost_es,cost_elb)
+    cost_total = cost_ec2 + cost_elb + cost_es + cost_rds
+    # insertFinalClusterCalc(timestamp_today, today, ENVIRONMENT, cost_ec2, cost_rds, cost_elb, cost_es, cost_total)
+    print 'Total Cost For ',REGION,ENVIRONMENT,ENVIRONMENT_TYPE,'(For Hour) : $',cost_total
     return cost_total
+
+# cluster_costing()

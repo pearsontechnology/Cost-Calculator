@@ -11,6 +11,7 @@ import time
 from pod_cost import mainProcedure
 from filter import filteringJOB, filterFirstTime, cleanupFilteredBackOff
 from ec2_cost_calculation import ec2_cost_calculation
+from integrate import cluster_costing
 
 
 def filteringAndCalculation():
