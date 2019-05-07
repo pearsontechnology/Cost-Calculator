@@ -65,8 +65,8 @@ def get_ec2_pricing(instance_type, location):
         response = response[key]['priceDimensions']
         key = response.keys()[0]
         response = response[key]['pricePerUnit']['USD']
-        EC2_PRICE[location][instance_type] = float(response);
-        return EC2_PRICE[location][instance_type];
+        EC2_PRICE[location][instance_type] = float(response)
+        return EC2_PRICE[location][instance_type]
 
     except:
         print (traceback.format_exc())
@@ -191,30 +191,30 @@ def ec2_cost_calculation(role):
 
 
 # Inserting into ec2 roles cost table
-def insert_ec2_role_cost(timestamp, date, cluster_name, role_name, role_cost):
-    global client
-    data = [
-        {
-            "measurement": "final_cluster_calculation",
-            "tags": {
-                "cluster_name": str(cluster_name),
-                "date": date
+# def insert_ec2_role_cost(timestamp, date, cluster_name, role_name, role_cost):
+#     global client
+#     data = [
+#         {
+#             "measurement": "final_cluster_calculation",
+#             "tags": {
+#                 "cluster_name": str(cluster_name),
+#                 "date": date
 
-            },
-            "fields": {
-                "role_name": role_name,
-                "role_cost": role_cost
-                # "Cost": cost
+#             },
+#             "fields": {
+#                 "role_name": role_name,
+#                 "role_cost": role_cost
+#                 # "Cost": cost
 
-            }
-        }
-    ]
-    try:
-        client.write_points(data)
-        print 'inserted event record: ' + str(timestamp)
+#             }
+#         }
+#     ]
+#     try:
+#         client.write_points(data)
+#         print 'inserted event record: ' + str(timestamp)
 
-    except:
-        writeToFile("error-calc.log", "Error inserting data: " + str(cluster_name))
+#     except:
+#         writeToFile("error-calc.log", "Error inserting data: " + str(cluster_name))
 
 
 def ec2_main_calc():

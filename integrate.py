@@ -27,33 +27,33 @@ VPC_ID = 'vpc-ff8af197'
 
 
 # Inserting into final calculation table
-def insertFinalClusterCalc(timestamp, date, ENVIRONMENT, ec2_cost, rds_cost, elb_cost, es_cost, total_cost):
-    global client
-    data = [
-        {
-            "measurement": "final_cluster_calculation",
-            "tags": {
-                "environment": str(ENVIRONMENT),
-                "date": date
+# def insertFinalClusterCalc(timestamp, date, ENVIRONMENT, ec2_cost, rds_cost, elb_cost, es_cost, total_cost):
+#     global client
+#     data = [
+#         {
+#             "measurement": "final_cluster_calculation",
+#             "tags": {
+#                 "environment": str(ENVIRONMENT),
+#                 "date": date
 
-            },
-            "fields": {
-                "ec2_cost": ec2_cost,
-                "rds_cost": rds_cost,
-                "elb_cost": elb_cost,
-                "es_cost": es_cost,
-                "total_cost": total_cost
-                # "Cost": cost
+#             },
+#             "fields": {
+#                 "ec2_cost": ec2_cost,
+#                 "rds_cost": rds_cost,
+#                 "elb_cost": elb_cost,
+#                 "es_cost": es_cost,
+#                 "total_cost": total_cost
+#                 # "Cost": cost
 
-            }
-        }
-    ]
-    try:
-        client.write_points(data)
-        print 'inserted event record: ' + str(timestamp) + ', ' + ENVIRONMENT + ' cost: ' + str(total_cost)
+#             }
+#         }
+#     ]
+#     try:
+#         client.write_points(data)
+#         print 'inserted event record: ' + str(timestamp) + ', ' + ENVIRONMENT + ' cost: ' + str(total_cost)
 
-    except:
-        writeToFile("error-calc.log", "Error inserting data: " + str(ENVIRONMENT))
+#     except:
+#         writeToFile("error-calc.log", "Error inserting data: " + str(ENVIRONMENT))
 
 
 def cluster_costing():
