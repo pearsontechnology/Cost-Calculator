@@ -1,0 +1,5 @@
+requests
+schedule
+kubernetes
+influxdb
+boto3
