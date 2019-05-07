@@ -15,7 +15,7 @@ import traceback
 config = cp.RawConfigParser()
 config.read(os.path.dirname(os.path.abspath(__file__)) + '/config.cfg')
 
-REGION = 'us-west-2'
+REGION = os.environ['REGION']
 REGION_NAME = config.get('regions', REGION)
 ENVIRONMENT = os.environ['ENVIRONMENT']
 ENVIRONMENT_TYPE = os.environ['ENVIRONMENT_TYPE']
@@ -231,4 +231,4 @@ def ec2_main_calc():
     return total_ec2_cost
 
 
-ec2_main_calc()
+#ec2_main_calc()

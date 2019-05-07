@@ -10,7 +10,7 @@ import os
 config = cp.RawConfigParser()
 config.read(os.path.dirname(os.path.abspath(__file__)) + '/config.cfg')
 
-REGION = 'us-east-2'
+REGION = os.environ['REGION']
 REGION_NAME = config.get('regions', REGION)
 ENVIRONMENT = os.environ['ENVIRONMENT']
 ENVIRONMENT_TYPE = os.environ['ENVIRONMENT_TYPE']

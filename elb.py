@@ -10,8 +10,8 @@ import re
 config = cp.RawConfigParser()
 config.read(os.path.dirname(os.path.abspath(__file__)) + '/config.cfg')
 
-REGION = config_1.get('regions', 'default')
-REGION_NAME = config_1.get('regions', REGION)
+REGION = os.environ['REGION']
+REGION_NAME = config.get('regions', REGION)
 ENVIRONMENT = os.environ['ENVIRONMENT']
 ENVIRONMENT_TYPE = os.environ['ENVIRONMENT_TYPE']
 # VPC_ID = 'vpc-ff8af197'
@@ -86,8 +86,10 @@ def elb_cost():
         end = time.time()
         print datetime.utcnow().strftime(
             '%Y-%m-%d %H:%M:%S') + ': ' + 'ELB Cost Calculation Ended. Total Execution Time is ' + str(end - start) + ' Seconds'
+        return total_instance_cost
     except:
         print (traceback.format_exc())
         print datetime.utcnow().strftime('%Y-%m-%d %H:%M:%S') + ': ' + 'Error in Calculating Cost for ELB'
 
 
+#elb_cost()
