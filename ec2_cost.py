@@ -10,21 +10,23 @@ import schedule
 import requests
 import time
 import kubernetes
+import traceback
 
 config_1 = cp.RawConfigParser()
-config_1.read(os.path.dirname(os.path.abspath(__file__))+'/config.cfg')
+config_1.read(os.path.dirname(os.path.abspath(__file__)) + '/config.cfg')
 
-REGION = config_1.get('regions', 'default')
-REGION_NAME = config_1.get('regions', REGION)
+REGION = 'us-east-2'
+REGION_NAME = config.get('regions', REGION)
 ENVIRONMENT = os.environ['ENVIRONMENT']
 ENVIRONMENT_TYPE = os.environ['ENVIRONMENT_TYPE']
-VPC_ID = 'vpc-ff8af197'
+
+# VPC_ID = 'vpc-ff8af197'
 
 EC2_PRICE = {}
 EBS_PRICE = {}
 
 ec2_resource = boto3.resource('ec2', region_name=REGION)
-pricing = boto3.client('pricing', region_name='us-east-1') # Pricing doesn't depends on provided region here 
+pricing = boto3.client('pricing')  # Pricing doesn't depends on provided region here
 
 today = datetime.utcnow()
 timestamp_today = time.mktime(today.timetuple())
@@ -68,7 +70,8 @@ def get_ec2_pricing(instance_type, location):
 
     except:
         print (traceback.format_exc())
-        print (datetime.utcnow().strftime('%Y-%m-%d %H:%M:%S') + ': ' + 'Error in Getting Price of the instance :' + instance_type + ', Region :' + location + ', OS :Linux')
+        print (datetime.utcnow().strftime(
+            '%Y-%m-%d %H:%M:%S') + ': ' + 'Error in Getting Price of the instance :' + instance_type + ', Region :' + location + ', OS :Linux')
         return 0
 
 
@@ -119,11 +122,13 @@ def get_ebs_pricing(id, location):
         response = response[key]['priceDimensions']
         key = response.keys()[0]
         response = response[key]['pricePerUnit']['USD']
-        EBS_PRICE[location][volume_type] = float(response)/30
+
+        EBS_PRICE[location][volume_type] = float(response) / 24 / 30
         return EBS_PRICE[location][volume_type] * volume_size
     except:
         print (traceback.format_exc())
-        print (datetime.utcnow().strftime('%Y-%m-%d %H:%M:%S') + ': ' + 'Error in Calculating Price of the Volume :' + id + ', Region :' + location)
+        print (datetime.utcnow().strftime(
+            '%Y-%m-%d %H:%M:%S') + ': ' + 'Error in Calculating Price of the Volume :' + id + ', Region :' + location)
         return 0
 
 
@@ -134,25 +139,24 @@ def get_volume_cost(instance, location):
         cost = cost + get_ebs_pricing(volume.id, location)
     return cost
 
+
 def ec2_cost_calculation(role):
-    global ec2_resource, REGION, REGION_NAME, VPC_ID, EC2_PRICE, EBS_PRICE
+    global ec2_resource, REGION, REGION_NAME, EC2_PRICE, EBS_PRICE
     ############################################INSTANCES AND IT'S IMPORTANT DATA(Filtered By Name Tag - mongo, cass) ARE RETRIEVED HERE###########################################################
     start = time.time()
 
     EC2_PRICE = {}
     EBS_PRICE = {}
 
-    print (datetime.utcnow().strftime('%Y-%m-%d %H:%M:%S') + ': ' + 'EC2 Cost Calculation(For Hours) Started')
+    print (datetime.utcnow().strftime('%Y-%m-%d %H:%M:%S') + ': ' + 'EC2 Cost Calculation(For Hours) Started For ' + role)
     print (datetime.utcnow().strftime('%Y-%m-%d %H:%M:%S') + ': ' + 'REGION:' + REGION)
     print (datetime.utcnow().strftime('%Y-%m-%d %H:%M:%S') + ': ' + 'REGION NAME:' + REGION_NAME)
-    print (datetime.utcnow().strftime('%Y-%m-%d %H:%M:%S') + ': ' + 'VPC ID:' + VPC_ID)
 
     instances = ec2_resource.instances.filter(
         Filters=[
-            {'Name': 'vpc-id', 'Values': [VPC_ID]},   # If filtering by tag, vpc id is not required
-            {'Name': 'tag:Environment', 'Values': [ENVIRONMENT]},  # if filtering by vpc id, environment and environment type not required
+            {'Name': 'tag:Environment', 'Values': [ENVIRONMENT]},
             {'Name': 'tag:EnvironmentType', 'Values': [ENVIRONMENT_TYPE]},
-            {'Name': 'tag:Role', 'Values': role}
+            {'Name': 'tag:Role', 'Values': [role]}
         ]
     )
 
@@ -178,9 +182,11 @@ def ec2_cost_calculation(role):
     print 'Total Volume Cost(For Hour) : $' + str(total_volume_cost)
     print 'Total Cost(For Hour) : $' + str(total_instance_cost + total_volume_cost)
     end = time.time()
-    print datetime.utcnow().strftime('%Y-%m-%d %H:%M:%S') + ': ' + 'EC2 Cost Calculation Ended. Total Execution Time is ' + str(end - start) + ' Seconds'
+    print datetime.utcnow().strftime(
+        '%Y-%m-%d %H:%M:%S') + ': ' + 'EC2 Cost Calculation Ended for '+role+'. Total Execution Time is ' + str(
+        end - start) + ' Seconds'
 
-    return total_instance_cost+total_volume_cost
+    return total_instance_cost + total_volume_cost
 
 
 # Inserting into ec2 roles cost table
@@ -197,7 +203,7 @@ def insert_ec2_role_cost(timestamp, date, cluster_name, role_name, role_cost):
             "fields": {
                 "role_name": role_name,
                 "role_cost": role_cost
-                #"Cost": cost
+                # "Cost": cost
 
             }
         }
@@ -208,15 +214,20 @@ def insert_ec2_role_cost(timestamp, date, cluster_name, role_name, role_cost):
 
     except:
         writeToFile("error-calc.log", "Error inserting data: " + str(cluster_name))
-        
+
+
 def ec2_main_calc():
-    roles = [master, k8-master, minion, k8-minion, stackstorm, etcd, consul]
+    roles = ['master', 'k8-master', 'minion', 'k8-minion', 'stackstorm', 'etcd', 'consul', 'bastion', 'ca']
     total_ec2_cost = 0
     for role in roles:
-        role_name = role
         role_cost = ec2_cost_calculation(role)
-        insert_ec2_role_cost(time_today, today, ENVIRONMENT, role_name, role_cost)
-        total_ec2_cost += role_cost
-        print total_ec2_cost
-        return total_ec2_cost
-        
+        # insert_ec2_role_cost(time_today, today, ENVIRONMENT, role_name, role_cost)
+        total_ec2_cost = total_ec2_cost + role_cost
+        print 'Cost upto '+role+' $'+ str(total_ec2_cost)
+        print
+
+    print 'Total Cost For Environment(For Hour) : $' + str(total_ec2_cost)
+    return total_ec2_cost
+
+
+ec2_main_calc()
