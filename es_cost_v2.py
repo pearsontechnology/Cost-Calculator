@@ -1,14 +1,19 @@
+import ConfigParser as cp
 import boto3
 import json
 from datetime import datetime
 import time
 import re
 import traceback
+import os
 
-REGION = 'us-east-2'
-REGION_NAME = 'US East (Ohio)'
-ENVIRONMENT = 'glp1'
-ENVIRONMENT_TYPE = 'nft'
+config = cp.RawConfigParser()
+config.read(os.path.dirname(os.path.abspath(__file__)) + '/config.cfg')
+
+REGION = os.environ['REGION']
+REGION_NAME = config.get('regions', REGION)
+ENVIRONMENT = os.environ['ENVIRONMENT']
+ENVIRONMENT_TYPE = os.environ['ENVIRONMENT_TYPE']
 
 pricing = boto3.client('pricing')
 es = boto3.client('es', region_name=REGION)
@@ -40,7 +45,33 @@ def get_es_instance_per_hour_price(instance_type, region):
         return 0
 
 
-# get_es_instance_per_hour_price('r3.8xlarge.elasticsearch','US East (N. Virginia)')
+def get_es_instance_volume_per_hour_price(region):
+    try:
+        es_instances_prices = pricing.get_products(
+            ServiceCode='AmazonES',
+            Filters=[
+                {'Type': 'TERM_MATCH', 'Field': 'location', 'Value': region},
+                {'Type': 'TERM_MATCH', 'Field': 'productFamily', 'Value': 'Elastic Search Volume'},
+                {'Type': 'TERM_MATCH', 'Field': 'storageMedia', 'Value': 'GP2'},
+            ]
+        )
+
+        resp = json.loads(es_instances_prices['PriceList'][0])['terms']['OnDemand']
+        key = resp.keys()[0]
+        resp = resp[key]['priceDimensions']
+        key = resp.keys()[0]
+        es_instance_price_per_hour = float(resp[key]['pricePerUnit']['USD']) / 30 / 24
+        print "Per hour volume cost rate: ", es_instance_price_per_hour
+        return es_instance_price_per_hour
+        print es_instances_prices
+    except:
+        print (traceback.format_exc())
+        print (datetime.utcnow().strftime(
+            '%Y-%m-%d %H:%M:%S') + ': ' + 'Error in Getting Price of the instance, Region :' + region)
+        return 0
+
+
+# Example: get_es_instance_volume_per_hour_price('US East (N. Virginia)')
 
 
 # This includes both masters and data nodes
@@ -92,6 +123,15 @@ def get_es_total_cost():
                     total_node_count = minion_count
                     total_node_cost = data_nodes_cost
 
+                # calculate volume cost
+                ebs_options = domain_info['DomainStatus']['EBSOptions']
+                if ebs_options['EBSEnabled']:
+                    volume_cost = float(get_es_instance_volume_per_hour_price(REGION_NAME)) * int(
+                        ebs_options['VolumeSize']) * int(minion_count)
+                    total_node_cost = total_node_cost + volume_cost
+                    print 'Cost for volume: $', volume_cost
+
+                # final domain cost
                 total_es_cost = total_es_cost + total_node_cost
 
                 print 'Total number of nodes in this ES domain: ', total_node_count
