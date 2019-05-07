@@ -12,10 +12,10 @@ import time
 import kubernetes
 import traceback
 
-config_1 = cp.RawConfigParser()
-config_1.read(os.path.dirname(os.path.abspath(__file__)) + '/config.cfg')
+config = cp.RawConfigParser()
+config.read(os.path.dirname(os.path.abspath(__file__)) + '/config.cfg')
 
-REGION = 'us-east-2'
+REGION = 'us-west-2'
 REGION_NAME = config.get('regions', REGION)
 ENVIRONMENT = os.environ['ENVIRONMENT']
 ENVIRONMENT_TYPE = os.environ['ENVIRONMENT_TYPE']
@@ -148,7 +148,8 @@ def ec2_cost_calculation(role):
     EC2_PRICE = {}
     EBS_PRICE = {}
 
-    print (datetime.utcnow().strftime('%Y-%m-%d %H:%M:%S') + ': ' + 'EC2 Cost Calculation(For Hours) Started For ' + role)
+    print (datetime.utcnow().strftime(
+        '%Y-%m-%d %H:%M:%S') + ': ' + 'EC2 Cost Calculation(For Hours) Started For ' + role)
     print (datetime.utcnow().strftime('%Y-%m-%d %H:%M:%S') + ': ' + 'REGION:' + REGION)
     print (datetime.utcnow().strftime('%Y-%m-%d %H:%M:%S') + ': ' + 'REGION NAME:' + REGION_NAME)
 
@@ -183,7 +184,7 @@ def ec2_cost_calculation(role):
     print 'Total Cost(For Hour) : $' + str(total_instance_cost + total_volume_cost)
     end = time.time()
     print datetime.utcnow().strftime(
-        '%Y-%m-%d %H:%M:%S') + ': ' + 'EC2 Cost Calculation Ended for '+role+'. Total Execution Time is ' + str(
+        '%Y-%m-%d %H:%M:%S') + ': ' + 'EC2 Cost Calculation Ended for ' + role + '. Total Execution Time is ' + str(
         end - start) + ' Seconds'
 
     return total_instance_cost + total_volume_cost
@@ -223,7 +224,7 @@ def ec2_main_calc():
         role_cost = ec2_cost_calculation(role)
         # insert_ec2_role_cost(time_today, today, ENVIRONMENT, role_name, role_cost)
         total_ec2_cost = total_ec2_cost + role_cost
-        print 'Cost upto '+role+' $'+ str(total_ec2_cost)
+        print 'Cost upto ' + role + ' $' + str(total_ec2_cost)
         print
 
     print 'Total Cost For Environment(For Hour) : $' + str(total_ec2_cost)
