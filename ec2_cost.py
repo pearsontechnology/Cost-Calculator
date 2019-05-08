@@ -26,7 +26,7 @@ EC2_PRICE = {}
 EBS_PRICE = {}
 
 ec2_resource = boto3.resource('ec2', region_name=REGION)
-pricing = boto3.client('pricing')  # Pricing doesn't depends on provided region here
+pricing = boto3.client('pricing', region_name="us-east-1")  # Pricing doesn't depends on provided region here
 
 today = datetime.utcnow()
 timestamp_today = time.mktime(today.timetuple())

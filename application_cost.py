@@ -6,6 +6,7 @@ import os
 from influxdb import InfluxDBClient
 from datetime import datetime
 import traceback
+from integrate import cluster_costing
 
 #using service account. binded with cluster role
 config.load_incluster_config()
@@ -15,7 +16,7 @@ print (datetime.utcnow().strftime('%Y-%m-%d %H:%M:%S') +
        ': ' + 'Cost Calculation(For This Hour) Started')
 
 # Mock Cost. will be added EC2 and non EC2
-total_cluster_cost = 500
+total_cluster_cost = cluster_costing()
 
 HOST = os.environ['DATABASE_HOST'] if "DATABASE_HOST" in os.environ else "localhost"
 PORT = os.environ['DATABASE_PORT'] if "DATABASE_PORT" in os.environ else 8086

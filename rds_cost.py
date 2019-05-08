@@ -25,7 +25,7 @@ ENVIRONMENT_TYPE = os.environ['ENVIRONMENT_TYPE']
 VPC_ID = 'vpc-ff8af197'
 
 client = boto3.client('rds', region_name=REGION)
-pricing = boto3.client('pricing')
+pricing = boto3.client('pricing',region_name="us-east-1")
 
 
 # Get the price of the RDS. Example : getRDSPricing('db.t2.large', 'South America (Sao Paulo)', 'Single-AZ',

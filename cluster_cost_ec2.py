@@ -19,7 +19,7 @@ REGION_NAME = config_1.get(CONFIG_FILE_SECTION, REGION)
 
 ec2Resource = boto3.resource('ec2', region_name=REGION)
 rds = boto3.client('rds', region_name=REGION)
-pricing = boto3.client('pricing', region_name=REGION)
+pricing = boto3.client('pricing', region_name="us-east-1")
 
 #####Get the Price of Instance (OnDemand). Example: getEC2Prices('t2.nano', 'US East (N. Virginia)') - Price calculated for 1 day
 def getEC2Pricing(instanceType, location):

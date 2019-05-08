@@ -15,7 +15,7 @@ REGION_NAME = config.get('regions', REGION)
 ENVIRONMENT = os.environ['ENVIRONMENT']
 ENVIRONMENT_TYPE = os.environ['ENVIRONMENT_TYPE']
 
-pricing = boto3.client('pricing')
+pricing = boto3.client('pricing',region_name="us-east-1")
 es = boto3.client('es', region_name=REGION)
 
 
