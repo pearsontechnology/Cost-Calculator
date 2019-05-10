@@ -33,6 +33,11 @@ def get_name_tag_values(environment, environment_type, service):
     if service == 'Amazon Elastic Compute Cloud - Compute' or service == 'EC2 - Other':
         roles = ['master', 'minion', 'stackstorm', 'etcd', 'consul', 'bastion', 'ca', 'prometheus']
         formatted_name_tag_values = format_tags(roles, environment, environment_type)
+
+        if service == 'EC2 - Other':
+            # Append NAT-GATEWAY Tag
+            formatted_name_tag_values.append(environment+'-'+environment_type)
+
         return formatted_name_tag_values
 
     elif service == 'Amazon Elastic Load Balancing':
