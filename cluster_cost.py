@@ -2,6 +2,7 @@ import boto3
 from datetime import datetime, timedelta
 import ConfigParser as cp
 import os
+import traceback
 
 config = cp.RawConfigParser()
 config.read(os.path.dirname(os.path.abspath(__file__)) + '/config.cfg')
@@ -54,56 +55,61 @@ def get_name_tag_values(environment, environment_type, service):
 
 def get_cost_and_usage(region, environment, environment_type, service):
     name_tag_values = get_name_tag_values(environment, environment_type, service)
-    response = client.get_cost_and_usage(
-        TimePeriod={
-            'Start': str_yesterday,
-            'End': str_today
-        },
-        Granularity='MONTHLY',
-        Filter={
-            'And': [
-                {
-                    'Dimensions': {
-                        'Key': 'SERVICE',
-                        'Values': [
-                            service
-                        ],
+    try:
+        response = client.get_cost_and_usage(
+            TimePeriod={
+                'Start': str_yesterday,
+                'End': str_today
+            },
+            Granularity='MONTHLY',
+            Filter={
+                'And': [
+                    {
+                        'Dimensions': {
+                            'Key': 'SERVICE',
+                            'Values': [
+                                service
+                            ],
+                        }
                     }
-                }
-                ,
-                {
-                    'Dimensions': {
-                        'Key': 'REGION',
-                        'Values': [
-                            region
-                        ],
+                    ,
+                    {
+                        'Dimensions': {
+                            'Key': 'REGION',
+                            'Values': [
+                                region
+                            ],
+                        }
                     }
-                }
-                ,
-                {
-                    'Tags': {
-                        'Key': 'Name',
-                        'Values': name_tag_values
+                    ,
+                    {
+                        'Tags': {
+                            'Key': 'Name',
+                            'Values': name_tag_values
+                        }
                     }
+                ]
+            },
+            GroupBy=[
+                {
+                    'Type': 'DIMENSION',
+                    'Key': 'SERVICE'
                 }
+            ],
+            Metrics=[
+                'UnblendedCost'
             ]
-        },
-        GroupBy=[
-            {
-                'Type': 'DIMENSION',
-                'Key': 'SERVICE'
-            }
-        ],
-        Metrics=[
-            'UnblendedCost'
-        ]
-    )
+        )
 
-    unblended_cost = response['ResultsByTime'][0]['Groups'][0]['Metrics']['UnblendedCost']['Amount']
+        unblended_cost = response['ResultsByTime'][0]['Groups'][0]['Metrics']['UnblendedCost']['Amount']
+        print  '(' + service + '): $' + str(unblended_cost)
+        return float(unblended_cost)
 
-    print  '(' + service + '): $' + str(unblended_cost)
-
-    return float(unblended_cost)
+    except:
+        print (traceback.format_exc())
+        print (datetime.utcnow().strftime(
+            '%Y-%m-%d %H:%M:%S') + ': ' + 'Error in Getting the cost of ' + service + ', Region :' + region)
+        return 0
 
 
 def get_cluster_cost(region, environment, environment_type):
