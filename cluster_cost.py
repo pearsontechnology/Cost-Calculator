@@ -16,12 +16,6 @@ ENVIRONMENT_TYPE = os.environ['ENVIRONMENT_TYPE']
 client = boto3.client('ce')
 ec2 = boto3.client('ec2', region_name=REGION)
 
-today = datetime.utcnow()
-str_today = today.strftime('%Y-%m-%d')
-yesterday = datetime.today() - timedelta(days=1)
-str_yesterday = yesterday.strftime('%Y-%m-%d')
-
-
 def get_number_of_paas_per_region():
     # Assumption : #of vpcs = #of paas
     pass_count = 0
@@ -79,7 +73,13 @@ def get_name_tag_values(environment, environment_type, service):
         return formatted_name_tag_values
 
 
-def get_cost_and_usage(region, environment, environment_type, service):
+def get_cost_and_usage(date, region, environment, environment_type, service):
+
+    str_start_date = date
+    start_date = datetime.strptime(date, '%Y-%m-%d')
+    end_date = start_date + timedelta(days=1)
+    str_end_date = end_date.strftime('%Y-%m-%d')
+
     name_tag_values = get_name_tag_values(environment, environment_type, service)
     Tags = {
         'Key': 'Name',
@@ -95,8 +95,8 @@ def get_cost_and_usage(region, environment, environment_type, service):
     try:
         response = client.get_cost_and_usage(
             TimePeriod={
-                'Start': str_yesterday,
-                'End': str_today
+                'Start': str_start_date,
+                'End': str_end_date
             },
             Granularity='MONTHLY',
             Filter={
@@ -146,8 +146,8 @@ def get_cost_and_usage(region, environment, environment_type, service):
         return 0
 
 
-def get_cluster_cost(region, environment, environment_type):
-    print 'Unblended Costs of', str_yesterday, environment, environment_type, region
+def get_cluster_cost(date, region, environment, environment_type):
+    print 'Unblended Costs of', date, environment, environment_type, region
 
     total_cost = 0
     services = ['Amazon Elastic Compute Cloud - Compute', 'EC2 - Other', 'Amazon Elastic Load Balancing',
@@ -157,7 +157,7 @@ def get_cluster_cost(region, environment, environment_type):
     for service in services:
         # Cloudwatch and CloudTrail costs will be divided among the number of PASS since it have no tags
         if service == 'AmazonCloudWatch' or service == 'AWS CloudTrail':
-            cost_per_service = get_cost_and_usage(region, environment, environment_type,
+            cost_per_service = get_cost_and_usage(date, region, environment, environment_type,
                                                   service) / get_number_of_paas_per_region()
             print '(' + service + ' - Per PAAS): ' + str(cost_per_service)
 
@@ -166,7 +166,7 @@ def get_cluster_cost(region, environment, environment_type):
             print '(EBS): ' + str(cost_per_service)
 
         else:
-            cost_per_service = get_cost_and_usage(region, environment, environment_type, service)
+            cost_per_service = get_cost_and_usage(date, region, environment, environment_type, service)
 
         total_cost = total_cost + cost_per_service
 
@@ -174,4 +174,4 @@ def get_cluster_cost(region, environment, environment_type):
     return total_cost
 
 
-get_cluster_cost(REGION, ENVIRONMENT, ENVIRONMENT_TYPE)
+get_cluster_cost('2019-05-10',REGION, ENVIRONMENT, ENVIRONMENT_TYPE)
