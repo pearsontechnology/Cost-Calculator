@@ -3,6 +3,7 @@ from datetime import datetime, timedelta
 import ConfigParser as cp
 import os
 import traceback
+from ebs_cost import ebs_main_calc
 
 config = cp.RawConfigParser()
 config.read(os.path.dirname(os.path.abspath(__file__)) + '/config.cfg')
@@ -153,7 +154,7 @@ def get_cluster_cost(region, environment, environment_type):
     print 'Unblended Costs of', str_yesterday, environment, environment_type, region
 
     services = ['Amazon Elastic Compute Cloud - Compute', 'EC2 - Other', 'Amazon Elastic Load Balancing',
-                'Amazon Elasticsearch Service', 'Amazon Relational Database Service', 'AmazonCloudWatch']
+                'Amazon Elasticsearch Service', 'Amazon Relational Database Service', 'AmazonCloudWatch', 'EBS']
     total_cost = 0
     for service in services:
 
@@ -161,6 +162,10 @@ def get_cluster_cost(region, environment, environment_type):
         if service == 'AmazonCloudWatch':
             cost_per_service = get_cost_and_usage(region, environment, environment_type, service)/get_number_of_paas_per_region()
             print '(AmazonCloudWatch - Per PAAS): '+ str(cost_per_service)
+
+        elif service == 'EBS':
+            cost_per_service = ebs_main_calc(region, environment, environment_type)
+            print '(EBS): '+ str(cost_per_service)
 
         else:
             cost_per_service = get_cost_and_usage(region, environment, environment_type, service)
