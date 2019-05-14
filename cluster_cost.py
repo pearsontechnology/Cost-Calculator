@@ -31,7 +31,7 @@ def get_number_of_paas_per_region():
             pass_count = pass_count + 1
 
         print (datetime.utcnow().strftime(
-            '%Y-%m-%d %H:%M:%S') + ': ' + 'Number of PAAS in ' + REGION + ' is = '+ str(pass_count))
+            '%Y-%m-%d %H:%M:%S') + ': ' + 'Number of PAAS in ' + REGION + ' is = ' + str(pass_count))
         return pass_count
 
     except:
@@ -78,19 +78,15 @@ def get_name_tag_values(environment, environment_type, service):
         formatted_name_tag_values = format_tags(roles, environment, environment_type)
         return formatted_name_tag_values
 
-    elif service == 'AmazonCloudWatch':
-        return ['']
-
 
 def get_cost_and_usage(region, environment, environment_type, service):
-
     name_tag_values = get_name_tag_values(environment, environment_type, service)
     Tags = {
         'Key': 'Name',
         'Values': name_tag_values
     }
 
-    if service == 'AmazonCloudWatch':
+    if service == 'AmazonCloudWatch' or service == 'AWS CloudTrail':
         Tags = {
             'Key': 'CreatedBy',
             'Values': ['']
@@ -153,19 +149,21 @@ def get_cost_and_usage(region, environment, environment_type, service):
 def get_cluster_cost(region, environment, environment_type):
     print 'Unblended Costs of', str_yesterday, environment, environment_type, region
 
-    services = ['Amazon Elastic Compute Cloud - Compute', 'EC2 - Other', 'Amazon Elastic Load Balancing',
-                'Amazon Elasticsearch Service', 'Amazon Relational Database Service', 'AmazonCloudWatch', 'EBS']
     total_cost = 0
-    for service in services:
+    services = ['Amazon Elastic Compute Cloud - Compute', 'EC2 - Other', 'Amazon Elastic Load Balancing',
+                'Amazon Elasticsearch Service', 'Amazon Relational Database Service', 'AmazonCloudWatch',
+                'AWS CloudTrail', 'EBS']
 
-        # Cloudwatch cost will be divided among the number of PASS since it have no tags
-        if service == 'AmazonCloudWatch':
-            cost_per_service = get_cost_and_usage(region, environment, environment_type, service)/get_number_of_paas_per_region()
-            print '(AmazonCloudWatch - Per PAAS): '+ str(cost_per_service)
+    for service in services:
+        # Cloudwatch and CloudTrail costs will be divided among the number of PASS since it have no tags
+        if service == 'AmazonCloudWatch' or service == 'AWS CloudTrail':
+            cost_per_service = get_cost_and_usage(region, environment, environment_type,
+                                                  service) / get_number_of_paas_per_region()
+            print '(' + service + ' - Per PAAS): ' + str(cost_per_service)
 
         elif service == 'EBS':
             cost_per_service = ebs_main_calc(region, environment, environment_type)
-            print '(EBS): '+ str(cost_per_service)
+            print '(EBS): ' + str(cost_per_service)
 
         else:
             cost_per_service = get_cost_and_usage(region, environment, environment_type, service)
