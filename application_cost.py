@@ -6,18 +6,19 @@ import os
 from influxdb import InfluxDBClient
 from datetime import datetime, timedelta
 import traceback
-#from integrate import cluster_costing
 
-# strict typed insert into influxdb
+
 def insert_cost_data(influx_client, app_cost_data):
     data = []
     for app in app_cost_data:
         data.append({
             "measurement": "application_cost",
             "tags": {
-                "namespace": str(app["namespace"])
+                "namespace": str(app["namespace"]),
+                "calc_date": str(app["calc_date"])
             },
             "fields": {
+                "calc_hour": str(app["calc_hour"]),
                 "cpu_usage": float(app["cpu_usage"]),
                 "memory_usage": float(app["memory_usage"]),
                 "pod_count": int(app["pod_count"]),
@@ -169,6 +170,14 @@ def compute_total_minion_resources(corev1api):
             'Minion Total Resource Calculation Error (v1 -> listNodes)'
     return (minion_total_cpu, minion_total_memory)
 
+def do_crd_calculation():
+    data = {
+        "cb": 0,
+        "mongo":0,
+        "rds": 0,
+        "neptune":0
+    }
+    return data
 
 def do_current_resource_usage_calcultaion(influx_client, k8sv1):
     namespace_usage_data = []
@@ -219,7 +228,7 @@ def do_past_namespace_cost_calculation(influx_client, cost_date, total_cluster_c
 
         if len(app_cost_data) == 0:
             print datetime.utcnow().strftime('%Y-%m-%d %H:%M:%S') + ': ' + \
-                'Past data unavailable. Skipping calculation'
+                'Past data unavailable on '+str(cost_date)+' . Skipping calculation'
         else:
             for app in app_cost_data:
                 app_cpu_cost = (CPU_RATIO/100.0 * total_cluster_cost) * \
@@ -230,6 +239,9 @@ def do_past_namespace_cost_calculation(influx_client, cost_date, total_cluster_c
                 app.update({
                     "app_cost": app_total_cost
                 })
+                crd_cost = do_crd_calculation()
+                app.update(crd_cost)
+                
             print (datetime.utcnow().strftime('%Y-%m-%d %H:%M:%S') +
                    ': ' + 'Starting to Insert Data')
             pprint(app_cost_data)
@@ -243,7 +255,7 @@ def do_past_namespace_cost_calculation(influx_client, cost_date, total_cluster_c
 # Main Procedure.
 
 
-def main_procedure(HOST, PORT, USER, PASSWORD, DATABASE, REGION, ENVIRONMENT, ENVIRONMENT_TYPE):
+def main_procedure(REGION, ENVIRONMENT, ENVIRONMENT_TYPE, HOST, PORT, USER, PASSWORD, DATABASE):
 
     print (datetime.utcnow().strftime('%Y-%m-%d %H:%M:%S') +
            ': ' + 'Past Cost and Usage Calculation(For This Hour) Started')
@@ -253,16 +265,9 @@ def main_procedure(HOST, PORT, USER, PASSWORD, DATABASE, REGION, ENVIRONMENT, EN
     v1 = client.CoreV1Api()
 
     influx_client = InfluxDBClient(HOST, PORT, USER, PASSWORD, DATABASE)
-    total_cluster_cost = 500#get_cluster_cost(cost_date.strftime("%Y-%m-%d"),REGION, ENVIRONMENT, ENVIRONMENT_TYPE)
+    # get_cluster_cost(cost_date.strftime("%Y-%m-%d"),REGION, ENVIRONMENT, ENVIRONMENT_TYPE)
+    total_cluster_cost = 500
     do_current_resource_usage_calcultaion(influx_client, v1)
     do_past_namespace_cost_calculation(
-        influx_client,cost_date,total_cluster_cost)
+        influx_client, cost_date, total_cluster_cost)
     return
-
-
-HOST = os.environ['DATABASE_HOST'] if "DATABASE_HOST" in os.environ else "localhost"
-PORT = os.environ['DATABASE_PORT'] if "DATABASE_PORT" in os.environ else 8086
-USER = os.environ['DATABASE_USER'] if "DATABASE_USER" in os.environ else "cost_admin"
-PASSWORD = os.environ['DATABASE_PASSWORD'] if "DATABASE_PASSWORD" in os.environ else ""
-DATABASE = os.environ['DATABASE_NAME'] if "DATABASE_NAME" in os.environ else "cost_db"
-main_procedure(HOST, PORT, USER, PASSWORD, DATABASE, "", "", "")
