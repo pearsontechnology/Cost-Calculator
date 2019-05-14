@@ -22,7 +22,11 @@ def insert_cost_data(influx_client, app_cost_data):
                 "cpu_usage": float(app["cpu_usage"]),
                 "memory_usage": float(app["memory_usage"]),
                 "pod_count": int(app["pod_count"]),
-                "app_cost": float(app["app_cost"])
+                "app_cost": float(app["app_cost"]),
+                "cb": float(app["cb"]),
+                "mongo": float(app["mongo"]),
+                "rds": float(app["rds"]),
+                "neptune": float(app["neptune"]),
             }
         })
     try:
@@ -239,13 +243,12 @@ def do_past_namespace_cost_calculation(influx_client, cost_date, total_cluster_c
                 app.update({
                     "app_cost": app_total_cost
                 })
-                crd_cost = do_crd_calculation()
+                crd_cost = do_crd_calculation() #not implemented
                 app.update(crd_cost)
                 
             print (datetime.utcnow().strftime('%Y-%m-%d %H:%M:%S') +
                    ': ' + 'Starting to Insert Data')
-            pprint(app_cost_data)
-            # insert_cost_data(influx_client, app_cost_data)
+            insert_cost_data(influx_client, app_cost_data)
     except:
         print (traceback.format_exc())
         print datetime.utcnow().strftime('%Y-%m-%d %H:%M:%S') + ': ' + \
@@ -261,7 +264,7 @@ def main_procedure(REGION, ENVIRONMENT, ENVIRONMENT_TYPE, HOST, PORT, USER, PASS
            ': ' + 'Past Cost and Usage Calculation(For This Hour) Started')
 
     cost_date = datetime.now() - timedelta(days=2)
-    config.load_kube_config()
+    config.load_incluster_config()
     v1 = client.CoreV1Api()
 
     influx_client = InfluxDBClient(HOST, PORT, USER, PASSWORD, DATABASE)
