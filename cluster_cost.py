@@ -173,5 +173,3 @@ def get_cluster_cost(date, region, environment, environment_type):
     print 'Total Cost For The Environment(For Day): $', str(total_cost)
     return total_cost
 
-
-get_cluster_cost('2019-05-10',REGION, ENVIRONMENT, ENVIRONMENT_TYPE)
