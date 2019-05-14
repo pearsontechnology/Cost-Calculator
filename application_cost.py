@@ -55,6 +55,33 @@ def insert_cost_data(influx_client, app_cost_data):
         print datetime.utcnow().strftime('%Y-%m-%d %H:%M:%S') + \
             ': ' + 'Data Insert Error '
 
+def insert_namespace_usage(influx_client,namespace_resource_data):
+    data = []
+    now = datetime.now()
+    for app in namespace_resource_data:
+        data.append({
+            "measurement": "namespace_resource_usage",
+            "tags": {
+                "namespace": str(app["namespace"]),
+                "calc_date": now.strftime("%Y-%m-%d")
+            },
+            "fields": {
+                "calc_hour": int(now.hour),
+                "cpu_usage": float(app["cpu_usage"]),
+                "memory_usage": float(app["memory_usage"]),
+                "pod_count": int(app["pod_count"])
+            }
+        })
+    try:
+        influx_client.write_points(data)
+        print (datetime.utcnow().strftime('%Y-%m-%d %H:%M:%S') + ': ' +
+               'Namespace Resource Usage (For This Hour) Inserted Successfully')
+    except:
+        print (traceback.format_exc())
+        print datetime.utcnow().strftime('%Y-%m-%d %H:%M:%S') + \
+            ': ' + 'Data Insert Error '
+
+
 
 # converts memory str to int
 def memory_to_int(memory_str):
@@ -129,7 +156,7 @@ def compute_total_minion_resources(corev1api):
 
 # Main Procedure.
 def main_procedure():
-    app_cost_data = []
+    namespace_usage_data = []
     total_cpu_used = 0
     total_memory_used = 0
     
@@ -155,35 +182,31 @@ def main_procedure():
                 namespace_total_cpu_usage += total_pod_cpu
                 namespace_total_memory_usage += total_pod_memory
     
-            app_cost_data.append({
+            namespace_usage_data.append({
                 "namespace": namespace_name,
                 "cpu_usage": namespace_total_cpu_usage,
                 "memory_usage": namespace_total_memory_usage,
                 "pod_count": namespace_pod_count
             })
-    
-            total_cpu_used += namespace_total_cpu_usage
-            total_memory_used += namespace_total_memory_usage
-    
     except:
         print (traceback.format_exc())
         print datetime.utcnow().strftime('%Y-%m-%d %H:%M:%S') + ': ' + \
             'Namespace Resource Calculatoion Error'
     
-    for app in app_cost_data:
-        app_cpu_cost = (CPU_RATIO/100.0 * total_cluster_cost) * \
-            (float(app["cpu_usage"]) / float(total_cpu_used))
-        app_memory_cost = (MEMORY_RATIO/100.0 * total_cluster_cost) * \
-            (float(app["memory_usage"]) / float(total_memory_used))
-        app_total_cost = app_cpu_cost + app_memory_cost
-        app.update({
-            "app_cost": app_total_cost
-        })
-    print (datetime.utcnow().strftime('%Y-%m-%d %H:%M:%S') +
-           ': ' + 'Starting to Insert Data')
-    insert_cost_data(influx_client, app_cost_data)
+    # for app in app_cost_data:
+    #     app_cpu_cost = (CPU_RATIO/100.0 * total_cluster_cost) * \
+    #         (float(app["cpu_usage"]) / float(total_cpu_used))
+    #     app_memory_cost = (MEMORY_RATIO/100.0 * total_cluster_cost) * \
+    #         (float(app["memory_usage"]) / float(total_memory_used))
+    #     app_total_cost = app_cpu_cost + app_memory_cost
+    #     app.update({
+    #         "app_cost": app_total_cost
+    #     })
+    # print (datetime.utcnow().strftime('%Y-%m-%d %H:%M:%S') +
+    #        ': ' + 'Starting to Insert Data')
+    # insert_cost_data(influx_client, app_cost_data)
     
-    print (datetime.utcnow().strftime('%Y-%m-%d %H:%M:%S') +
-           ': ' + 'Cost Calculation(For This Hour) Ended')
+    # print (datetime.utcnow().strftime('%Y-%m-%d %H:%M:%S') +
+    #        ': ' + 'Cost Calculation(For This Hour) Ended')
     return
     
