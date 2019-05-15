@@ -4,46 +4,29 @@ from kubernetes import client, config
 from pprint import pprint
 import os
 from influxdb import InfluxDBClient
-from datetime import datetime
+from datetime import datetime, timedelta
 import traceback
-from integrate import cluster_costing
+from cluster_cost import get_cluster_cost
 
-#using service account. binded with cluster role
-config.load_incluster_config()
-v1 = client.CoreV1Api()
-
-print (datetime.utcnow().strftime('%Y-%m-%d %H:%M:%S') +
-       ': ' + 'Cost Calculation(For This Hour) Started')
-
-# Mock Cost. will be added EC2 and non EC2
-total_cluster_cost = cluster_costing()
-
-HOST = os.environ['DATABASE_HOST'] if "DATABASE_HOST" in os.environ else "localhost"
-PORT = os.environ['DATABASE_PORT'] if "DATABASE_PORT" in os.environ else 8086
-USER = os.environ['DATABASE_USER'] if "DATABASE_USER" in os.environ else "cost_admin"
-PASSWORD = os.environ['DATABASE_PASSWORD'] if "DATABASE_PASSWORD" in os.environ else ""
-DATABASE = os.environ['DATABASE_NAME'] if "DATABASE_NAME" in os.environ else "cost_db"
-
-print(HOST,PORT,USER,PASSWORD,DATABASE)
-
-# creating influx client
-influx_client = InfluxDBClient(HOST, PORT, USER, PASSWORD, DATABASE)
-
-
-# strict typed insert into influxdb
 def insert_cost_data(influx_client, app_cost_data):
     data = []
     for app in app_cost_data:
         data.append({
             "measurement": "application_cost",
             "tags": {
-                "namespace": str(app["namespace"])
+                "namespace": str(app["namespace"]),
+                "calc_date": str(app["calc_date"])
             },
             "fields": {
+                "calc_hour": str(app["calc_hour"]),
                 "cpu_usage": float(app["cpu_usage"]),
                 "memory_usage": float(app["memory_usage"]),
                 "pod_count": int(app["pod_count"]),
-                "app_cost": float(app["app_cost"])
+                "app_cost": float(app["app_cost"]),
+                "cb": float(app["cb"]),
+                "mongo": float(app["mongo"]),
+                "rds": float(app["rds"]),
+                "neptune": float(app["neptune"]),
             }
         })
     try:
@@ -54,6 +37,70 @@ def insert_cost_data(influx_client, app_cost_data):
         print (traceback.format_exc())
         print datetime.utcnow().strftime('%Y-%m-%d %H:%M:%S') + \
             ': ' + 'Data Insert Error '
+
+
+def insert_namespace_usage(influx_client, namespace_resource_data):
+    data = []
+    now = datetime.now()
+    for app in namespace_resource_data:
+        data.append({
+            "measurement": "namespace_resource_usage",
+            "tags": {
+                "namespace": str(app["namespace"]),
+                "calc_date": now.strftime("%Y-%m-%d")
+            },
+            "fields": {
+                "calc_hour": int(now.hour),
+                "cpu_usage": float(app["cpu_usage"]),
+                "memory_usage": float(app["memory_usage"]),
+                "pod_count": int(app["pod_count"])
+            }
+        })
+    try:
+        influx_client.write_points(data)
+        print (datetime.utcnow().strftime('%Y-%m-%d %H:%M:%S') + ': ' +
+               'Namespace Resource Usage (For This Hour) Inserted Successfully')
+    except:
+        print (traceback.format_exc())
+        print datetime.utcnow().strftime('%Y-%m-%d %H:%M:%S') + \
+            ': ' + 'Data Insert Error '
+
+
+def get_resource_usage_by_date(influx_client, search_date):
+
+    result = None
+    total_memory_used = 0
+    total_cpu_used = 0.0
+    return_data = []
+    try:
+        query = "SELECT * FROM namespace_resource_usage where calc_date = '" + \
+            search_date.strftime("%Y-%m-%d") + \
+            "' AND calc_hour = " + str(search_date.hour)
+        result = influx_client.query(query)
+
+    except:
+        print (traceback.format_exc())
+        print datetime.utcnow().strftime('%Y-%m-%d %H:%M:%S') + \
+            ': ' + 'Data Read Error'
+
+    if result is not None and result.error is None:
+        result_list = list(result.get_points(
+            measurement="namespace_resource_usage"))
+        for result_item in result_list:
+            return_data.append({
+                "namespace": result_item["namespace"],
+                "cpu_usage": result_item["cpu_usage"],
+                "memory_usage": result_item["memory_usage"],
+                "pod_count": result_item["pod_count"],
+                "calc_date": result_item["calc_date"],
+                "calc_hour": result_item["calc_hour"],
+            })
+            total_memory_used += int(result_item["memory_usage"])
+            total_cpu_used += float(result_item["cpu_usage"])
+    elif result is not None and result.error is not None:
+        raise Exception("Influxdb Error :" + str(result.error))
+
+    return return_data, total_cpu_used, total_memory_used
 
 
 # converts memory str to int
@@ -127,63 +174,102 @@ def compute_total_minion_resources(corev1api):
             'Minion Total Resource Calculation Error (v1 -> listNodes)'
     return (minion_total_cpu, minion_total_memory)
 
-# Main Procedure.
-def main_procedure():
-    app_cost_data = []
-    total_cpu_used = 0
-    total_memory_used = 0
-    
-    # ratio 50:50. as percentage
-    CPU_RATIO = 50
-    MEMORY_RATIO = 100 - CPU_RATIO
-    
+def do_crd_calculation():
+    data = {
+        "cb": 0,
+        "mongo":0,
+        "rds": 0,
+        "neptune":0
+    }
+    return data
+
+def do_current_resource_usage_calcultaion(influx_client, k8sv1):
+    namespace_usage_data = []
     try:
-    
-        api_responce_namespaces = v1.list_namespace()
+
+        api_responce_namespaces = k8sv1.list_namespace()
         for namespace in api_responce_namespaces.items:
-        
+
             namespace_name = namespace.metadata.name
             namespace_pod_count = 0
             namespace_total_cpu_usage = 0
             namespace_total_memory_usage = 0
-    
-            api_responce_pod = v1.list_namespaced_pod(namespace_name)
-    
+
+            api_responce_pod = k8sv1.list_namespaced_pod(namespace_name)
+
             for pod in api_responce_pod.items:
                 namespace_pod_count += 1
                 total_pod_cpu, total_pod_memory = pod_total_resource(pod)
                 namespace_total_cpu_usage += total_pod_cpu
                 namespace_total_memory_usage += total_pod_memory
-    
-            app_cost_data.append({
+
+            namespace_usage_data.append({
                 "namespace": namespace_name,
                 "cpu_usage": namespace_total_cpu_usage,
                 "memory_usage": namespace_total_memory_usage,
                 "pod_count": namespace_pod_count
             })
-    
-            total_cpu_used += namespace_total_cpu_usage
-            total_memory_used += namespace_total_memory_usage
-    
+        insert_namespace_usage(influx_client, namespace_usage_data)
     except:
         print (traceback.format_exc())
         print datetime.utcnow().strftime('%Y-%m-%d %H:%M:%S') + ': ' + \
             'Namespace Resource Calculatoion Error'
-    
-    for app in app_cost_data:
-        app_cpu_cost = (CPU_RATIO/100.0 * total_cluster_cost) * \
-            (float(app["cpu_usage"]) / float(total_cpu_used))
-        app_memory_cost = (MEMORY_RATIO/100.0 * total_cluster_cost) * \
-            (float(app["memory_usage"]) / float(total_memory_used))
-        app_total_cost = app_cpu_cost + app_memory_cost
-        app.update({
-            "app_cost": app_total_cost
-        })
-    print (datetime.utcnow().strftime('%Y-%m-%d %H:%M:%S') +
-           ': ' + 'Starting to Insert Data')
-    insert_cost_data(influx_client, app_cost_data)
-    
-    print (datetime.utcnow().strftime('%Y-%m-%d %H:%M:%S') +
-           ': ' + 'Cost Calculation(For This Hour) Ended')
     return
-    
+
+
+def do_past_namespace_cost_calculation(influx_client, cost_date, total_cluster_cost):
+    # ratio 50:50. as percentage
+    CPU_RATIO = 50
+    MEMORY_RATIO = 100 - CPU_RATIO
+    app_cost_data = []
+    total_cpu_used = 0
+    total_memory_used = 0
+
+    try:
+        print cost_date
+        app_cost_data, total_cpu_used, total_memory_used = get_resource_usage_by_date(
+            influx_client, cost_date)
+
+        if len(app_cost_data) == 0:
+            print datetime.utcnow().strftime('%Y-%m-%d %H:%M:%S') + ': ' + \
+                'Past data unavailable on '+str(cost_date)+' . Skipping calculation'
+        else:
+            for app in app_cost_data:
+                app_cpu_cost = (CPU_RATIO/100.0 * total_cluster_cost) * \
+                    (float(app["cpu_usage"]) / float(total_cpu_used))
+                app_memory_cost = (MEMORY_RATIO/100.0 * total_cluster_cost) * \
+                    (float(app["memory_usage"]) / float(total_memory_used))
+                app_total_cost = app_cpu_cost + app_memory_cost
+                app.update({
+                    "app_cost": app_total_cost
+                })
+                crd_cost = do_crd_calculation() #not implemented
+                app.update(crd_cost)
+                
+            print (datetime.utcnow().strftime('%Y-%m-%d %H:%M:%S') +
+                   ': ' + 'Starting to Insert Data')
+            insert_cost_data(influx_client, app_cost_data)
+    except:
+        print (traceback.format_exc())
+        print datetime.utcnow().strftime('%Y-%m-%d %H:%M:%S') + ': ' + \
+            'Past Cost Calculatoion Error'
+    return
+
+# Main Procedure.
+
+
+def main_procedure(REGION, ENVIRONMENT, ENVIRONMENT_TYPE, HOST, PORT, USER, PASSWORD, DATABASE):
+
+    print (datetime.utcnow().strftime('%Y-%m-%d %H:%M:%S') +
+           ': ' + 'Past Cost and Usage Calculation(For This Hour) Started')
+
+    cost_date = datetime.now() - timedelta(days=2)
+    config.load_incluster_config()
+    v1 = client.CoreV1Api()
+
+    influx_client = InfluxDBClient(HOST, PORT, USER, PASSWORD, DATABASE)
+    total_cluster_cost = get_cluster_cost(cost_date.strftime("%Y-%m-%d"),REGION, ENVIRONMENT, ENVIRONMENT_TYPE)
+    do_current_resource_usage_calcultaion(influx_client, v1)
+    do_past_namespace_cost_calculation(
+        influx_client, cost_date, total_cluster_cost)
+    return
