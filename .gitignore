@@ -3,3 +3,5 @@
 test.py
 test*.py
 *.log
+.vscode/*
+.vscode

@@ -32,11 +32,11 @@ def calc_ec2_based_crd_cost(date,region,environment, environment_type, namespace
         try:
             api_response = api_instance.list_namespaced_custom_object(
                 group, version, namespace, crd_plural)
-            responce_items = api_response.__getitem__("items")
+            responce_items = api_response["items"]
             if(len(responce_items) != 0):
                 calculated_names = []
                 for item in responce_items:
-                    calc_name = item.__getitem__("metadata").__getitem__("name")
+                    calc_name = item["metadata"]["name"]
                     calc_name += "-" + namespace
                     calc_name += "-" + role
                     calc_name += "-" + environment
