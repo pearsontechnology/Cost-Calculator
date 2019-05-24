@@ -20,33 +20,37 @@ def calc_ec2_based_crd_cost(date,region,environment, environment_type, namespace
     version = 'v1'
 
     # role   :   plural in CRD
-    crd_plural = "mysqls"
-    crd_singular = "mysql"
+    considered_crd = {
+        "mysql": "mysqls",
+        "postgres": "postgreses"
+    }
 
     services = ['Amazon Relational Database Service']
 
     return_obj = {}
-    try:
-        api_response = api_instance.list_namespaced_custom_object(
-            group, version, namespace, crd_plural)
-        responce_items = api_response["items"]
-        if(len(responce_items) != 0):
-            calculated_names = []
-            for item in responce_items:
-                calc_name = environment
-                calc_name += "-" + environment_type
-                calc_name += "-" + re.sub('["-.]+', '', item['metadata']['namespace'])
-                calc_name += "-" + crd_singular
-                calc_name += "-" + re.sub('["-.]+', '', item["metadata"]['name'])
 
-                calculated_names.append(calc_name)
+    for role, crd_plural in considered_crd.iteritems():
+        try:
+            api_response = api_instance.list_namespaced_custom_object(
+                group, version, namespace, crd_plural)
+            responce_items = api_response["items"]
+            if(len(responce_items) != 0):
+                calculated_names = []
+                for item in responce_items:
+                    calc_name = environment
+                    calc_name += "-" + environment_type
+                    calc_name += "-" + re.sub('["-.]+', '', item['metadata']['namespace'])
+                    calc_name += "-" + role
+                    calc_name += "-" + re.sub('["-.]+', '', item["metadata"]['name'])
 
-            print(calculated_names)
-            return_obj[crd_plural] = call_ce_crd(date,region,services,calculated_names)
-        else:
-            print("No resources. Skipping")
-    except ApiException:
-        return_obj = {}
+                    calculated_names.append(calc_name)
+
+                print(calculated_names)
+                return_obj[crd_plural] = call_ce_crd(date,region,services,calculated_names)
+            else:
+                print("No resources. Skipping")
+        except ApiException:
+            continue
 
     pprint(return_obj)
     return return_obj
