@@ -20,7 +20,7 @@ def calc_ec2_based_crd_cost(date,region,environment, environment_type, namespace
     # role   :   plural in CRD
     crd_plural = "neptunes"
 
-    services = ['Neptune']
+    services = ['Amazon Neptune']
 
     return_obj = {}
     try:
