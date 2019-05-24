@@ -6,14 +6,10 @@ import os
 from call_ce_crd import call_ce_crd
 from datetime import datetime,timedelta
 
-config.load_kube_config()
-v1 = client.CoreV1Api()
-
 # tested with CB and Mongo
 def calc_ec2_based_crd_cost(date,region,environment, environment_type, namespace):
 
-    api_instance = kubernetes.client.CustomObjectsApi(
-        kubernetes.client.ApiClient())
+    api_instance = kubernetes.client.CustomObjectsApi(kubernetes.client.ApiClient())
     group = 'prsn.io'
     version = 'v1'
 
@@ -50,14 +46,3 @@ def calc_ec2_based_crd_cost(date,region,environment, environment_type, namespace
             continue
     
     return return_obj
-
-
-namespaces = v1.list_namespace()
-
-ENVIRONMENT = os.environ['ENVIRONMENT'] if "ENVIRONMENT" in os.environ else "glp1"
-ENVIRONMENT_TYPE = os.environ['ENVIRONMENT_TYPE'] if "ENVIRONMENT_TYPE" in os.environ else "pre"
-
-cost_date = datetime.now() - timedelta(days=2) 
-for namespace in namespaces.items:
-    namespace_name = namespace.metadata.name
-    calc_ec2_based_crd_cost(datetime.strftime(cost_date, '%Y-%m-%d'),"us-east-2",ENVIRONMENT, ENVIRONMENT_TYPE, namespace_name)
