@@ -16,6 +16,10 @@ from application_cost import main_procedure
 
 print (datetime.utcnow().strftime('%Y-%m-%d %H:%M:%S') + ': ' + 'No Import Errors -> Running Procedure')
 
-while True:
-    main_procedure(REGION,ENVIRONMENT,ENVIRONMENT_TYPE,HOST,PORT,USER,PASSWORD,DATABASE)
-    time.sleep(60*60)
+if ENVIRONMENT == 'CICD':
+    while True:
+        time.sleep(30)
+else:
+    while True:
+        main_procedure(REGION,ENVIRONMENT,ENVIRONMENT_TYPE,HOST,PORT,USER,PASSWORD,DATABASE)
+        time.sleep(60*60)
