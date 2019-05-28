@@ -70,7 +70,7 @@ def get_ebs_pricing(id, location, region_name):
         key = response.keys()[0]
         response = response[key]['pricePerUnit']['USD']
 
-        EBS_PRICE[location][volume_type] = float(response) / 30
+        EBS_PRICE[location][volume_type] = float(response) / 30 / 24
         return EBS_PRICE[location][volume_type] * volume_size
     except:
         print (traceback.format_exc())
@@ -87,7 +87,7 @@ def get_volume_cost(instance, region_name, region):
     return cost
 
 
-def ebs_cost_calculation(role,region, environment, environment_type):
+def ebs_cost_calculation(role,region, environment, environment_type, namespace):
     global ec2_resource, REGION, REGION_NAME, EBS_PRICE
 
     ec2_resource = boto3.resource('ec2', region_name=region)
@@ -104,7 +104,8 @@ def ebs_cost_calculation(role,region, environment, environment_type):
         Filters=[
             {'Name': 'tag:Environment', 'Values': [environment]},
             {'Name': 'tag:EnvironmentType', 'Values': [environment_type]},
-            {'Name': 'tag:Role', 'Values': [role]}
+            {'Name': 'tag:Role', 'Values': [role]},
+            {'Name': 'tag:namespace', 'Values': [namespace]}
         ]
     )
 
@@ -131,16 +132,14 @@ def ebs_cost_calculation(role,region, environment, environment_type):
     return total_volume_cost
 
 
-def ebs_main_calc(region, environment, environment_type):
-    roles = ['cb']
+def ebs_main_calc(region, environment, environment_type, role, namespace):
+    roles = [role]
     total_ebs_cost = 0
     for role in roles:
-        role_cost = ebs_cost_calculation(role,region, environment, environment_type)
-        # insert_ec2_role_cost(time_today, today, ENVIRONMENT, role_name, role_cost)
+        role_cost = ebs_cost_calculation(role,region, environment, environment_type, namespace)
         total_ebs_cost = total_ebs_cost + role_cost
         print 'Cost upto ' + role + ' $' + str(total_ebs_cost)
         print
 
     print 'Total Cost For EBS(Per Day) : $' + str(total_ebs_cost)
     return total_ebs_cost
-
