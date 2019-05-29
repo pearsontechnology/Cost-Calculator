@@ -6,8 +6,8 @@ import os
 from influxdb import InfluxDBClient
 from datetime import datetime, timedelta
 import traceback
-from cluster_cost import get_cluster_cost
-
+from cluster_cost import get_cluster_cost_per_hour
+from crd_costs import crd_cost_by_namespace;
 def insert_cost_data(influx_client, app_cost_data):
     data = []
     for app in app_cost_data:
@@ -268,7 +268,7 @@ def main_procedure(REGION, ENVIRONMENT, ENVIRONMENT_TYPE, HOST, PORT, USER, PASS
     v1 = client.CoreV1Api()
 
     influx_client = InfluxDBClient(HOST, PORT, USER, PASSWORD, DATABASE)
-    total_cluster_cost = get_cluster_cost(cost_date.strftime("%Y-%m-%d"),REGION, ENVIRONMENT, ENVIRONMENT_TYPE)
+    total_cluster_cost = get_cluster_cost_per_hour(cost_date.strftime("%Y-%m-%d"),REGION, ENVIRONMENT, ENVIRONMENT_TYPE)
     do_current_resource_usage_calcultaion(influx_client, v1)
     do_past_namespace_cost_calculation(
         influx_client, cost_date, total_cluster_cost)

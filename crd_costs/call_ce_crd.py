@@ -65,4 +65,4 @@ def call_ce_crd(date, region, services, tags):
                 '%Y-%m-%d %H:%M:%S') + ': ' + 'Error in Getting the cost of ' + service + ', Region :' + region)
             return_cost += 0.0
 
-    return return_cost /24.0
+    return float(return_cost) /24.0
