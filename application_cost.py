@@ -11,24 +11,30 @@ from crd_costs import crd_cost_by_namespace;
 def insert_cost_data(influx_client, app_cost_data):
     data = []
     for app in app_cost_data:
+
+        fields = {
+            "calc_hour": str(app["calc_hour"]),
+            "cpu_usage": float(app["cpu_usage"]),
+            "memory_usage": float(app["memory_usage"]),
+            "pod_count": int(app["pod_count"]),
+            "app_cost": float(app["app_cost"])
+        }   
+        tags = {
+            "namespace": str(app["namespace"]),
+            "calc_date": str(app["calc_date"])
+            
+        }
+
+        for key in app.keys():
+            if key not in fields and key not in tags:
+                fields[key] = float(app[key])
+
         data.append({
             "measurement": "application_cost",
-            "tags": {
-                "namespace": str(app["namespace"]),
-                "calc_date": str(app["calc_date"])
-            },
-            "fields": {
-                "calc_hour": str(app["calc_hour"]),
-                "cpu_usage": float(app["cpu_usage"]),
-                "memory_usage": float(app["memory_usage"]),
-                "pod_count": int(app["pod_count"]),
-                "app_cost": float(app["app_cost"]),
-                "cb": float(app["cb"]),
-                "mongo": float(app["mongo"]),
-                "rds": float(app["rds"]),
-                "neptune": float(app["neptune"]),
-            }
+            "tags": tags,
+            "fields": fields
         })
+
     try:
         influx_client.write_points(data)
         print (datetime.utcnow().strftime('%Y-%m-%d %H:%M:%S') + ': ' +
@@ -217,7 +223,7 @@ def do_current_resource_usage_calcultaion(influx_client, k8sv1):
     return
 
 
-def do_past_namespace_cost_calculation(influx_client, cost_date, total_cluster_cost):
+def do_past_namespace_cost_calculation(REGION, ENVIRONMENT, ENVIRONMENT_TYPE,influx_client, cost_date, total_cluster_cost):
     # ratio 50:50. as percentage
     CPU_RATIO = 50
     MEMORY_RATIO = 100 - CPU_RATIO
@@ -243,7 +249,7 @@ def do_past_namespace_cost_calculation(influx_client, cost_date, total_cluster_c
                 app.update({
                     "app_cost": app_total_cost
                 })
-                crd_cost = do_crd_calculation() #not implemented
+                crd_cost = crd_cost_by_namespace(REGION,ENVIRONMENT,ENVIRONMENT_TYPE,cost_date,app.namespace)
                 app.update(crd_cost)
                 
             print (datetime.utcnow().strftime('%Y-%m-%d %H:%M:%S') +
@@ -271,5 +277,5 @@ def main_procedure(REGION, ENVIRONMENT, ENVIRONMENT_TYPE, HOST, PORT, USER, PASS
     total_cluster_cost = get_cluster_cost_per_hour(cost_date.strftime("%Y-%m-%d"),REGION, ENVIRONMENT, ENVIRONMENT_TYPE)
     do_current_resource_usage_calcultaion(influx_client, v1)
     do_past_namespace_cost_calculation(
-        influx_client, cost_date, total_cluster_cost)
+        REGION, ENVIRONMENT, ENVIRONMENT_TYPE,influx_client, cost_date, total_cluster_cost)
     return
