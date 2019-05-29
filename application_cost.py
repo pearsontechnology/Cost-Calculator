@@ -180,15 +180,6 @@ def compute_total_minion_resources(corev1api):
             'Minion Total Resource Calculation Error (v1 -> listNodes)'
     return (minion_total_cpu, minion_total_memory)
 
-def do_crd_calculation():
-    data = {
-        "cb": 0,
-        "mongo":0,
-        "rds": 0,
-        "neptune":0
-    }
-    return data
-
 def do_current_resource_usage_calcultaion(influx_client, k8sv1):
     namespace_usage_data = []
     try:
