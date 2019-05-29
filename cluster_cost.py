@@ -173,3 +173,6 @@ def get_cluster_cost(date, region, environment, environment_type):
     print 'Total Cost For The Environment(For Day): $', str(total_cost)
     return total_cost
 
+def get_cluster_cost_per_hour(date, region, environment, environment_type):
+    return float(get_cluster_cost(date, region, environment, environment_type)) / 24.0
+
