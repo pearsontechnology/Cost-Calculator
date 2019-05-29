@@ -8,8 +8,6 @@ from ec2_crd_ebs_cost import ebs_main_calc
 from datetime import datetime,timedelta
 
 
-config.load_kube_config()
-
 # tested with CB and Mongo
 def calc_ec2_based_crd_cost(date,region,environment, environment_type, namespace):
 
