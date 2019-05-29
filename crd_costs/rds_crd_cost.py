@@ -9,7 +9,6 @@ import urllib3
 urllib3.disable_warnings(urllib3.exceptions.InsecureRequestWarning)
 import re
 
-config.load_kube_config()
 v1 = client.CoreV1Api()
 
 def calc_ec2_based_crd_cost(date,region,environment, environment_type, namespace):
