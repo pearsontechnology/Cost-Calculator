@@ -5,6 +5,7 @@ from pprint import pprint
 import os
 from influxdb import InfluxDBClient
 from datetime import datetime, timedelta
+import time
 import traceback
 from cluster_cost import get_cluster_cost_per_hour
 from crd_costs import crd_cost_by_namespace
@@ -43,8 +44,8 @@ def insert_cost_data(influx_client, app_cost_data):
                'Cost Calculation(For This Hour) Inserted Successfully')
     except:
         print (traceback.format_exc())
-        print datetime.utcnow().strftime('%Y-%m-%d %H:%M:%S') + \
-            ': ' + 'Data Insert Error '
+        print (datetime.utcnow().strftime(
+            '%Y-%m-%d %H:%M:%S') + ': ' + 'Data Insert Error ')
 
 
 def insert_namespace_usage(influx_client, namespace_resource_data):
@@ -270,6 +271,14 @@ def main_procedure(REGION, ENVIRONMENT, ENVIRONMENT_TYPE, HOST, PORT, USER, PASS
     v1 = client.CoreV1Api()
 
     influx_client = InfluxDBClient(HOST, PORT, USER, PASSWORD, DATABASE)
+    while True:
+        try:
+            influx_client.ping()
+            break
+        except:
+            print("Influxdb Connection Failed. Retrying in 60 Secounds")
+            time.sleep(60)
+
     total_cluster_cost = get_cluster_cost_per_hour(
         cost_date.strftime("%Y-%m-%d"), REGION, ENVIRONMENT, ENVIRONMENT_TYPE)
     do_current_resource_usage_calcultaion(influx_client, v1)
