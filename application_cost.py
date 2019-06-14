@@ -40,11 +40,11 @@ def insert_cost_data(influx_client, app_cost_data):
 
     try:
         influx_client.write_points(data)
-        print (datetime.utcnow().strftime('%Y-%m-%d %H:%M:%S') + ': ' +
-               'Cost Calculation(For This Hour) Inserted Successfully')
+        print(datetime.utcnow().strftime('%Y-%m-%d %H:%M:%S') + ': ' +
+              'Cost Calculation(For This Hour) Inserted Successfully')
     except:
-        print (traceback.format_exc())
-        print (datetime.utcnow().strftime(
+        print(traceback.format_exc())
+        print(datetime.utcnow().strftime(
             '%Y-%m-%d %H:%M:%S') + ': ' + 'Data Insert Error ')
 
 
@@ -67,12 +67,12 @@ def insert_namespace_usage(influx_client, namespace_resource_data):
         })
     try:
         influx_client.write_points(data)
-        print (datetime.utcnow().strftime('%Y-%m-%d %H:%M:%S') + ': ' +
-               'Namespace Resource Usage (For This Hour) Inserted Successfully')
+        print(datetime.utcnow().strftime('%Y-%m-%d %H:%M:%S') + ': ' +
+              'Namespace Resource Usage (For This Hour) Inserted Successfully')
     except:
-        print (traceback.format_exc())
-        print datetime.utcnow().strftime('%Y-%m-%d %H:%M:%S') + \
-            ': ' + 'Data Insert Error '
+        print(traceback.format_exc())
+        print(datetime.utcnow().strftime(
+            '%Y-%m-%d %H:%M:%S') + ': ' + 'Data Insert Error ')
 
 
 def get_resource_usage_by_date(influx_client, search_date):
@@ -88,9 +88,9 @@ def get_resource_usage_by_date(influx_client, search_date):
         result = influx_client.query(query)
 
     except:
-        print (traceback.format_exc())
-        print datetime.utcnow().strftime('%Y-%m-%d %H:%M:%S') + \
-            ': ' + 'Data Read Error'
+        print(traceback.format_exc())
+        print(datetime.utcnow().strftime(
+            '%Y-%m-%d %H:%M:%S') + ': ' + 'Data Read Error')
 
     if result is not None and result.error is None:
         result_list = list(result.get_points(
@@ -159,9 +159,9 @@ def pod_total_resource(pod):
                 else:
                     pod_memory_usage += memory_to_int(default_memory)
     except:
-        print (traceback.format_exc())
-        print datetime.utcnow().strftime('%Y-%m-%d %H:%M:%S') + \
-            ': ' + 'Pod resource calculation error '
+        print(traceback.format_exc())
+        print(datetime.utcnow().strftime('%Y-%m-%d %H:%M:%S') +
+              ': ' + 'Pod resource calculation error ')
     return (pod_cpu_usage, pod_memory_usage)
 
 
@@ -178,9 +178,9 @@ def compute_total_minion_resources(corev1api):
             minion_total_memory += memory_to_int(
                 node.status.capacity["memory"])
     except:
-        print (traceback.format_exc())
-        print datetime.utcnow().strftime('%Y-%m-%d %H:%M:%S') + ': ' + \
-            'Minion Total Resource Calculation Error (v1 -> listNodes)'
+        print(traceback.format_exc())
+        print(datetime.utcnow().strftime('%Y-%m-%d %H:%M:%S') + ': ' +
+              'Minion Total Resource Calculation Error (v1 -> listNodes)')
     return (minion_total_cpu, minion_total_memory)
 
 
@@ -212,9 +212,9 @@ def do_current_resource_usage_calcultaion(influx_client, k8sv1):
             })
         insert_namespace_usage(influx_client, namespace_usage_data)
     except:
-        print (traceback.format_exc())
-        print datetime.utcnow().strftime('%Y-%m-%d %H:%M:%S') + ': ' + \
-            'Namespace Resource Calculatoion Error'
+        print(traceback.format_exc())
+        print(datetime.utcnow().strftime('%Y-%m-%d %H:%M:%S') +
+              ': ' + 'Namespace Resource Calculatoion Error')
     return
 
 
@@ -227,14 +227,12 @@ def do_past_namespace_cost_calculation(REGION, ENVIRONMENT, ENVIRONMENT_TYPE, in
     total_memory_used = 0
 
     try:
-        print cost_date
         app_cost_data, total_cpu_used, total_memory_used = get_resource_usage_by_date(
             influx_client, cost_date)
 
         if len(app_cost_data) == 0:
-            print datetime.utcnow().strftime('%Y-%m-%d %H:%M:%S') + ': ' + \
-                'Past data unavailable on ' + \
-                str(cost_date)+' . Skipping calculation'
+            print(datetime.utcnow().strftime('%Y-%m-%d %H:%M:%S') + ': ' +
+                  'Past data unavailable on ' + str(cost_date)+' . Skipping calculation')
         else:
             for app in app_cost_data:
                 app_cpu_cost = (CPU_RATIO/100.0 * total_cluster_cost) * \
@@ -249,13 +247,13 @@ def do_past_namespace_cost_calculation(REGION, ENVIRONMENT, ENVIRONMENT_TYPE, in
                     REGION, ENVIRONMENT, ENVIRONMENT_TYPE, cost_date, app.namespace)
                 app.update(crd_cost)
 
-            print (datetime.utcnow().strftime('%Y-%m-%d %H:%M:%S') +
-                   ': ' + 'Starting to Insert Data')
+            print(datetime.utcnow().strftime('%Y-%m-%d %H:%M:%S') +
+                  ': ' + 'Starting to Insert Data')
             insert_cost_data(influx_client, app_cost_data)
     except:
-        print (traceback.format_exc())
-        print datetime.utcnow().strftime('%Y-%m-%d %H:%M:%S') + ': ' + \
-            'Past Cost Calculatoion Error'
+        print(traceback.format_exc())
+        print(datetime.utcnow().strftime('%Y-%m-%d %H:%M:%S') +
+              ': ' + 'Past Cost Calculatoion Error')
     return
 
 # Main Procedure.
@@ -263,8 +261,8 @@ def do_past_namespace_cost_calculation(REGION, ENVIRONMENT, ENVIRONMENT_TYPE, in
 
 def main_procedure(REGION, ENVIRONMENT, ENVIRONMENT_TYPE, HOST, PORT, USER, PASSWORD, DATABASE):
 
-    print (datetime.utcnow().strftime('%Y-%m-%d %H:%M:%S') +
-           ': ' + 'Past Cost and Usage Calculation(For This Hour) Started')
+    print(datetime.utcnow().strftime('%Y-%m-%d %H:%M:%S') + ': ' +
+          'Past Cost and Usage Calculation(For This Hour) Started')
 
     cost_date = datetime.now() - timedelta(days=2)
     config.load_incluster_config()
