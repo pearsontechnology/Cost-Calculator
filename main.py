@@ -16,7 +16,7 @@ from application_cost import main_procedure
 
 print (datetime.utcnow().strftime('%Y-%m-%d %H:%M:%S') + ': ' + 'No Import Errors -> Running Procedure')
 
-if ENVIRONMENT_TYPE == 'CICD':
+if ENVIRONMENT_TYPE == 'CICD' or ENVIRONMENT_TYPE == 'ci':
     while True:
         time.sleep(30)
 else:
