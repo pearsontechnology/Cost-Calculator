@@ -263,8 +263,6 @@ def main_procedure(REGION, ENVIRONMENT, ENVIRONMENT_TYPE, HOST, PORT, USER, PASS
     
     retries = 30
     current_retry = 0
-    print(datetime.utcnow().strftime('%Y-%m-%d %H:%M:%S') + ': ' +
-          'Past Cost and Usage Calculation(For This Hour) Started')
 
     print(datetime.utcnow().strftime('%Y-%m-%d %H:%M:%S') + ': ' +
           'Influxdb Availability Check Started')
@@ -282,6 +280,9 @@ def main_procedure(REGION, ENVIRONMENT, ENVIRONMENT_TYPE, HOST, PORT, USER, PASS
             else:
                 time.sleep(60)
 
+    print(datetime.utcnow().strftime('%Y-%m-%d %H:%M:%S') + ': ' +
+      'Past Cost and Usage Calculation(For This Hour) Started')
+      
     cost_date = datetime.now() - timedelta(days=2)
     config.load_incluster_config()
     v1 = client.CoreV1Api()
