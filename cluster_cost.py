@@ -1,23 +1,14 @@
 import boto3
 from datetime import datetime, timedelta
-import ConfigParser as cp
 import os
 import traceback
 from ebs_cost import ebs_main_calc
 
-config = cp.RawConfigParser()
-config.read(os.path.dirname(os.path.abspath(__file__)) + '/config.cfg')
-
-REGION = os.environ['REGION']
-REGION_NAME = config.get('regions', REGION)
-ENVIRONMENT = os.environ['ENVIRONMENT']
-ENVIRONMENT_TYPE = os.environ['ENVIRONMENT_TYPE']
-
 client = boto3.client('ce')
-ec2 = boto3.client('ec2', region_name=REGION)
 
-def get_number_of_paas_per_region():
+def get_number_of_paas_per_region(region):
     # Assumption : #of vpcs = #of paas
+    ec2 = boto3.client('ec2', region_name=region)
     pass_count = 0
     try:
         vpcs = ec2.describe_vpcs()
@@ -25,7 +16,7 @@ def get_number_of_paas_per_region():
             pass_count = pass_count + 1
 
         print (datetime.utcnow().strftime(
-            '%Y-%m-%d %H:%M:%S') + ': ' + 'Number of PAAS in ' + REGION + ' is = ' + str(pass_count))
+            '%Y-%m-%d %H:%M:%S') + ': ' + 'Number of PAAS in ' + region + ' is = ' + str(pass_count))
         return pass_count
 
     except:
@@ -158,7 +149,7 @@ def get_cluster_cost(date, region, environment, environment_type):
         # Cloudwatch and CloudTrail costs will be divided among the number of PASS since it have no tags
         if service == 'AmazonCloudWatch' or service == 'AWS CloudTrail':
             cost_per_service = get_cost_and_usage(date, region, environment, environment_type,
-                                                  service) / get_number_of_paas_per_region()
+                                                  service) / get_number_of_paas_per_region(region)
             print '(' + service + ' - Per PAAS): ' + str(cost_per_service)
 
         elif service == 'EBS':
