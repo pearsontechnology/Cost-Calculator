@@ -260,23 +260,31 @@ def do_past_namespace_cost_calculation(REGION, ENVIRONMENT, ENVIRONMENT_TYPE, in
 
 
 def main_procedure(REGION, ENVIRONMENT, ENVIRONMENT_TYPE, HOST, PORT, USER, PASSWORD, DATABASE):
-
+    
+    retries = 30
+    current_retry = 0
     print(datetime.utcnow().strftime('%Y-%m-%d %H:%M:%S') + ': ' +
           'Past Cost and Usage Calculation(For This Hour) Started')
 
-    cost_date = datetime.now() - timedelta(days=2)
-    config.load_incluster_config()
-    v1 = client.CoreV1Api()
-
+    print(datetime.utcnow().strftime('%Y-%m-%d %H:%M:%S') + ': ' +
+          'Influxdb Availability Check Started')
     influx_client = InfluxDBClient(HOST, PORT, USER, PASSWORD, DATABASE)
     while True:
         try:
             influx_client.ping()
             break
         except:
+            current_retry += 1
             print("Influxdb Connection Failed. Retrying in 60 Secounds")
-            time.sleep(60)
 
+            if current_retry > retries:
+                break
+            else:
+                time.sleep(60)
+
+    cost_date = datetime.now() - timedelta(days=2)
+    config.load_incluster_config()
+    v1 = client.CoreV1Api()
     total_cluster_cost = get_cluster_cost_per_hour(
         cost_date.strftime("%Y-%m-%d"), REGION, ENVIRONMENT, ENVIRONMENT_TYPE)
     do_current_resource_usage_calcultaion(influx_client, v1)
