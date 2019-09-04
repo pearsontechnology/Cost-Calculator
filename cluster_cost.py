@@ -12,7 +12,7 @@ def get_number_of_paas_per_region(region):
     pass_count = 0
     try:
         vpcs = ec2.describe_vpcs()
-        for vpc in vpcs['Vpcs']:
+        for _ in vpcs['Vpcs']:
             pass_count = pass_count + 1
 
         print (datetime.utcnow().strftime(
