@@ -1,16 +1,15 @@
 # -*- coding: utf-8 -*-
 import boto3
-import ConfigParser as cp
+from configparser import ConfigParser 
 from influxdb import InfluxDBClient
 import json
 import os
 from datetime import datetime
-import schedule
 import requests
 import time
 import traceback
 
-config = cp.RawConfigParser()
+config = ConfigParser()
 config.read(os.path.abspath(os.path.join(os.path.dirname( __file__ ), '..', 'config.cfg')))
 
 EBS_PRICE = {}
@@ -93,7 +92,7 @@ def ebs_cost_calculation(role,region, environment, environment_type, namespace):
     ec2_resource = boto3.resource('ec2', region_name=region)
     region_name = config.get('regions', region)
 
-    start = time.time()
+    #start = time.time()
 
     print (datetime.utcnow().strftime(
         '%Y-%m-%d %H:%M:%S') + ': ' + 'EBS Cost Calculation(Per Day) Started For ' + role)
@@ -116,18 +115,18 @@ def ebs_cost_calculation(role,region, environment, environment_type, namespace):
         instance_count = instance_count + 1
         volume_cost = get_volume_cost(instance, region_name, region)
 
-        print str(instance_count) + '. ' + 'Instance : ' + instance.id,
-        print ' |  Volume Cost : $' + str(volume_cost),
+        #print str(instance_count) + '. ' + 'Instance : ' + instance.id,
+        #print ' |  Volume Cost : $' + str(volume_cost),
 
         total_volume_cost = total_volume_cost + volume_cost
 
-    print datetime.utcnow().strftime('%Y-%m-%d %H:%M:%S') + ': ' + 'Processed ' + str(instance_count) + ' Instances'
-    print 'Total Volume Cost(For Day) : $' + str(total_volume_cost)
-    print 'Total Cost(For Day) : $' + str(total_volume_cost)
-    end = time.time()
-    print datetime.utcnow().strftime(
-        '%Y-%m-%d %H:%M:%S') + ': ' + 'EBS Cost Calculation Ended for ' + role + '. Total Execution Time is ' + str(
-        end - start) + ' Seconds'
+    #print datetime.utcnow().strftime('%Y-%m-%d %H:%M:%S') + ': ' + 'Processed ' + str(instance_count) + ' Instances'
+    #print 'Total Volume Cost(For Day) : $' + str(total_volume_cost)
+    #print 'Total Cost(For Day) : $' + str(total_volume_cost)
+    #end = time.time()
+    #print datetime.utcnow().strftime(
+    #    '%Y-%m-%d %H:%M:%S') + ': ' + 'EBS Cost Calculation Ended for ' + role + '. Total Execution Time is ' + str(
+    #    end - start) + ' Seconds'
 
     return total_volume_cost
 
@@ -138,8 +137,8 @@ def ebs_main_calc(region, environment, environment_type, role, namespace):
     for role in roles:
         role_cost = ebs_cost_calculation(role,region, environment, environment_type, namespace)
         total_ebs_cost = total_ebs_cost + role_cost
-        print 'Cost upto ' + role + ' $' + str(total_ebs_cost)
-        print
+    #    print 'Cost upto ' + role + ' $' + str(total_ebs_cost)
+    #    print
 
-    print 'Total Cost For EBS(Per Day) : $' + str(total_ebs_cost)
+    #print 'Total Cost For EBS(Per Day) : $' + str(total_ebs_cost)
     return total_ebs_cost
