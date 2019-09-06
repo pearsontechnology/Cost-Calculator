@@ -161,6 +161,3 @@ def get_cluster_cost(date, region, environment, environment_type):
 
 def get_cluster_cost_per_hour(date, region, environment, environment_type):
     return float(get_cluster_cost(date, region, environment, environment_type)) / 24.0
-
-date = datetime.now() - timedelta(days=1)
-print(get_cluster_cost_per_hour(date.strftime("%Y-%m-%d"),"us-east-2","glp1","pre"))

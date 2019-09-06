@@ -88,7 +88,7 @@ def get_volume_cost(instance, region_name, region):
 
 
 def ebs_cost_calculation(role,region, environment, environment_type, namespace):
-    global ec2_resource, REGION, REGION_NAME, EBS_PRICE
+
 
     ec2_resource = boto3.resource('ec2', region_name=region)
     region_name = config.get('regions', region)
