@@ -3,7 +3,7 @@ from kubernetes import client, config
 from kubernetes.client.rest import ApiException
 from pprint import pprint
 import os
-from call_ce_crd import call_ce_crd
+from .call_ce_crd import call_ce_crd
 from datetime import datetime,timedelta
 
 
