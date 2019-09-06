@@ -146,8 +146,8 @@ def cpu_mi_convert(cpu_str):
 def pod_total_resource(pod):
     pod_cpu_usage = 0
     pod_memory_usage = 0
-    default_cpu = "50m"
-    default_memory = "100Mi"
+    default_cpu = "1"
+    default_memory = "2Gi"
     try:
         for container in pod.spec.containers:
             requests = container.resources.requests
