@@ -2,7 +2,6 @@ import boto3
 from datetime import datetime, timedelta
 import os
 import traceback
-from ebs_cost import ebs_main_calc
 
 client = boto3.client('ce')
 
@@ -152,10 +151,6 @@ def get_cluster_cost(date, region, environment, environment_type):
                                                   service) / get_number_of_paas_per_region(region)
             print ('(' + service + ' - Per PAAS): ' + str(cost_per_service))
 
-        elif service == 'EBS':
-            cost_per_service = ebs_main_calc(region, environment, environment_type)
-            print ('(EBS): ' + str(cost_per_service))
-
         else:
             cost_per_service = get_cost_and_usage(date, region, environment, environment_type, service)
 
@@ -167,3 +162,5 @@ def get_cluster_cost(date, region, environment, environment_type):
 def get_cluster_cost_per_hour(date, region, environment, environment_type):
     return float(get_cluster_cost(date, region, environment, environment_type)) / 24.0
 
+date = datetime.now() - timedelta(days=1)
+print(get_cluster_cost_per_hour(date.strftime("%Y-%m-%d"),"us-east-2","glp1","pre"))
