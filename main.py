@@ -1,9 +1,14 @@
 import os
+from argparse import ArgumentParser
+
+parser = ArgumentParser()
+parser.add_argument('-dbp','--database_password',help="Influxdb password",type=str,default="mock")
+args = parser.parse_args()
 
 HOST = os.environ['DATABASE_HOST'] if "DATABASE_HOST" in os.environ else "localhost"
 PORT = os.environ['DATABASE_PORT'] if "DATABASE_PORT" in os.environ else 8086
 USER = os.environ['DATABASE_USER'] if "DATABASE_USER" in os.environ else "cost_admin"
-PASSWORD = os.environ['DATABASE_PASSWORD'] if "DATABASE_PASSWORD" in os.environ else ""
+PASSWORD = args.database_password
 DATABASE = os.environ['DATABASE_NAME'] if "DATABASE_NAME" in os.environ else "cost_db"
 ENVIRONMENT = os.environ['ENVIRONMENT'] if "ENVIRONMENT" in os.environ else "devpaas"
 ENVIRONMENT_TYPE = os.environ['ENVIRONMENT_TYPE'] if "ENVIRONMENT_TYPE" in os.environ else "dev"
