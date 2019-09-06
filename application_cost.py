@@ -12,6 +12,8 @@ from crd_costs import crd_cost_by_namespace
 
 
 def insert_cost_data(influx_client, app_cost_data):
+    retries = 0
+    retry_limit = 5
     data = []
     for app in app_cost_data:
 
@@ -25,7 +27,6 @@ def insert_cost_data(influx_client, app_cost_data):
         tags = {
             "namespace": str(app["namespace"]),
             "calc_date": str(app["calc_date"])
-
         }
 
         for key in app.keys():
@@ -37,15 +38,19 @@ def insert_cost_data(influx_client, app_cost_data):
             "tags": tags,
             "fields": fields
         })
-
-    try:
-        influx_client.write_points(data)
-        print(datetime.utcnow().strftime('%Y-%m-%d %H:%M:%S') + ': ' +
-              'Cost Calculation(For This Hour) Inserted Successfully')
-    except:
-        print(traceback.format_exc())
-        print(datetime.utcnow().strftime(
-            '%Y-%m-%d %H:%M:%S') + ': ' + 'Data Insert Error ')
+    
+    while retries < retry_limit:
+        try:
+            influx_client.write_points(data)
+            print(datetime.utcnow().strftime('%Y-%m-%d %H:%M:%S') + ': ' +
+                'Cost Calculation(For This Hour) Inserted Successfully')
+            break
+        except:
+            print(traceback.format_exc())
+            print(datetime.utcnow().strftime(
+                '%Y-%m-%d %H:%M:%S') + ': ' + 'Data Insert Error. Retrying in 10 secounds')
+            retries += 1
+            time.sleep(10)
 
 
 def insert_namespace_usage(influx_client, namespace_resource_data):
@@ -141,8 +146,8 @@ def cpu_mi_convert(cpu_str):
 def pod_total_resource(pod):
     pod_cpu_usage = 0
     pod_memory_usage = 0
-    default_cpu = "50m"
-    default_memory = "100Mi"
+    default_cpu = "1"
+    default_memory = "2Gi"
     try:
         for container in pod.spec.containers:
             requests = container.resources.requests

@@ -2,7 +2,6 @@ import boto3
 from datetime import datetime, timedelta
 import os
 import traceback
-from ebs_cost import ebs_main_calc
 
 client = boto3.client('ce')
 
@@ -127,7 +126,7 @@ def get_cost_and_usage(date, region, environment, environment_type, service):
         )
 
         unblended_cost = response['ResultsByTime'][0]['Groups'][0]['Metrics']['UnblendedCost']['Amount']
-        print  '(' + service + '): $' + str(unblended_cost)
+        print  ('(' + service + '): $' + str(unblended_cost))
         return float(unblended_cost)
 
     except:
@@ -138,32 +137,27 @@ def get_cost_and_usage(date, region, environment, environment_type, service):
 
 
 def get_cluster_cost(date, region, environment, environment_type):
-    print 'Unblended Costs of', date, environment, environment_type, region
+    print ('Unblended Costs of', date, environment, environment_type, region)
 
     total_cost = 0
     services = ['Amazon Elastic Compute Cloud - Compute', 'EC2 - Other', 'Amazon Elastic Load Balancing',
                 'Amazon Elasticsearch Service', 'Amazon Relational Database Service', 'AmazonCloudWatch',
-                'AWS CloudTrail', 'EBS']
+                'AWS CloudTrail']
 
     for service in services:
         # Cloudwatch and CloudTrail costs will be divided among the number of PASS since it have no tags
         if service == 'AmazonCloudWatch' or service == 'AWS CloudTrail':
             cost_per_service = get_cost_and_usage(date, region, environment, environment_type,
                                                   service) / get_number_of_paas_per_region(region)
-            print '(' + service + ' - Per PAAS): ' + str(cost_per_service)
-
-        elif service == 'EBS':
-            cost_per_service = ebs_main_calc(region, environment, environment_type)
-            print '(EBS): ' + str(cost_per_service)
+            print ('(' + service + ' - Per PAAS): ' + str(cost_per_service))
 
         else:
             cost_per_service = get_cost_and_usage(date, region, environment, environment_type, service)
 
         total_cost = total_cost + cost_per_service
 
-    print 'Total Cost For The Environment(For Day): $', str(total_cost)
+    print ('Total Cost For The Environment(For Day): $', str(total_cost))
     return total_cost
 
 def get_cluster_cost_per_hour(date, region, environment, environment_type):
     return float(get_cluster_cost(date, region, environment, environment_type)) / 24.0
-

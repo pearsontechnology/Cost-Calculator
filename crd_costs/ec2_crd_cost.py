@@ -4,7 +4,6 @@ from kubernetes.client.rest import ApiException
 from pprint import pprint
 import os
 from call_ce_crd import call_ce_crd
-from ec2_crd_ebs_cost import ebs_main_calc
 from datetime import datetime,timedelta
 
 
@@ -21,11 +20,11 @@ def calc_ec2_based_crd_cost(date,region,environment, environment_type, namespace
         "mg": "mongos"
     }
 
-    services = ['Amazon Elastic Compute Cloud - Compute', 'Amazon Elastic Load Balancing']
+    services = ['Amazon Elastic Compute Cloud - Compute', 'Amazon Elastic Load Balancing','EC2 - Other']
 
     return_obj = {}
 
-    for role, crd_plural in considered_crd.iteritems():
+    for role, crd_plural in considered_crd.items():
         try:
             api_response = api_instance.list_namespaced_custom_object(
                 group, version, namespace, crd_plural)
@@ -41,7 +40,6 @@ def calc_ec2_based_crd_cost(date,region,environment, environment_type, namespace
                     calculated_names.append(calc_name)
                 print(calculated_names)
                 return_obj[crd_plural] = call_ce_crd(date,region,services,calculated_names)
-                return_obj[crd_plural] += ebs_main_calc(region,environment,environment_type,role,namespace)
             else:
                 print("No resources. Skipping")
         except ApiException:
