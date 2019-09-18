@@ -56,6 +56,9 @@ def insert_cost_data(influx_client, app_cost_data):
 def insert_namespace_usage(influx_client, namespace_resource_data):
     data = []
     now = datetime.now()
+    retries = 0
+    retry_limit = 5
+
     for app in namespace_resource_data:
         data.append({
             "measurement": "namespace_resource_usage",
@@ -70,14 +73,19 @@ def insert_namespace_usage(influx_client, namespace_resource_data):
                 "pod_count": int(app["pod_count"])
             }
         })
-    try:
-        influx_client.write_points(data)
-        print(datetime.utcnow().strftime('%Y-%m-%d %H:%M:%S') + ': ' +
+
+    while retries < retry_limit:
+        try:
+            influx_client.write_points(data)
+            print(datetime.utcnow().strftime('%Y-%m-%d %H:%M:%S') + ': ' +
               'Namespace Resource Usage (For This Hour) Inserted Successfully')
-    except:
-        print(traceback.format_exc())
-        print(datetime.utcnow().strftime(
-            '%Y-%m-%d %H:%M:%S') + ': ' + 'Data Insert Error ')
+            break
+        except:
+            print(traceback.format_exc())
+            print(datetime.utcnow().strftime(
+                '%Y-%m-%d %H:%M:%S') + ': ' + 'Data Insert Error. Retrying in 10 secounds')
+            retries += 1
+            time.sleep(10)
 
 
 def get_resource_usage_by_date(influx_client, search_date):
@@ -126,19 +134,20 @@ def memory_to_int(memory_str):
     elif "Mi" in memory_str or "M" in memory_str:
         arr = memory_str.split("M")
         int_memory = int(arr[0]) * 1024
+    elif "Gi" in memory_str or "G" in memory_str:
+        arr = memory_str.split("G")
+        int_memory = int(arr[0]) * 1024 * 1024
     return int_memory
 
 
 # convert cpu mi to number
 def cpu_mi_convert(cpu_str):
     cpu = 0
-    if type(cpu_str) is int:
-        return cpu_str
     if "m" in cpu_str:
-        cpu_int = cpu_str[0:len(cpu_str)-1]
-        cpu = int(cpu_int) / 1000.0
+        cpu_arr = cpu_str.split("m")
+        cpu = float(cpu_arr[0]) / 1000.0
     else:
-        cpu = int(cpu_str)
+        cpu = float(cpu_str)
     return cpu
 
 
@@ -146,8 +155,8 @@ def cpu_mi_convert(cpu_str):
 def pod_total_resource(pod):
     pod_cpu_usage = 0
     pod_memory_usage = 0
-    default_cpu = "1"
-    default_memory = "2Gi"
+    default_cpu = "500m"
+    default_memory = "1Gi"
     try:
         for container in pod.spec.containers:
             requests = container.resources.requests
@@ -202,8 +211,10 @@ def do_current_resource_usage_calcultaion(influx_client, k8sv1):
             namespace_total_memory_usage = 0
 
             api_responce_pod = k8sv1.list_namespaced_pod(namespace_name)
-
             for pod in api_responce_pod.items:
+                pod_phase = pod.status.phase
+                if pod_phase == "Succeeded" or pod_phase == "Failed":
+                    continue
                 namespace_pod_count += 1
                 total_pod_cpu, total_pod_memory = pod_total_resource(pod)
                 namespace_total_cpu_usage += total_pod_cpu
@@ -281,7 +292,8 @@ def main_procedure(REGION, ENVIRONMENT, ENVIRONMENT_TYPE, HOST, PORT, USER, PASS
             print("Influxdb Connection Failed. Retrying in 60 Secounds")
 
             if current_retry > retries:
-                break
+                #Add local persistance
+                return
             else:
                 time.sleep(60)
 
@@ -292,8 +304,8 @@ def main_procedure(REGION, ENVIRONMENT, ENVIRONMENT_TYPE, HOST, PORT, USER, PASS
     config.load_incluster_config()
     v1 = client.CoreV1Api()
     total_cluster_cost = get_cluster_cost_per_hour(
-        cost_date.strftime("%Y-%m-%d"), REGION, ENVIRONMENT, ENVIRONMENT_TYPE)
+       cost_date.strftime("%Y-%m-%d"), REGION, ENVIRONMENT, ENVIRONMENT_TYPE)
     do_current_resource_usage_calcultaion(influx_client, v1)
     do_past_namespace_cost_calculation(
-        REGION, ENVIRONMENT, ENVIRONMENT_TYPE, influx_client, cost_date, total_cluster_cost)
+       REGION, ENVIRONMENT, ENVIRONMENT_TYPE, influx_client, cost_date, total_cluster_cost)
     return
