@@ -6,9 +6,8 @@ from datetime import datetime, timedelta
 def call_ce_crd(date, region, services, tags):
 
     client = boto3.client('ce')
-    str_start_date = date
-    start_date = datetime.strptime(date, '%Y-%m-%d')
-    end_date = start_date + timedelta(days=1)
+    str_start_date = date.strftime('%Y-%m-%d')
+    end_date = date + timedelta(days=1)    
     str_end_date = end_date.strftime('%Y-%m-%d')
     return_cost = 0.0
 

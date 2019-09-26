@@ -260,7 +260,7 @@ def do_past_namespace_cost_calculation(REGION, ENVIRONMENT, ENVIRONMENT_TYPE, in
                     "app_cost": app_total_cost
                 })
                 crd_cost = crd_cost_by_namespace(
-                    REGION, ENVIRONMENT, ENVIRONMENT_TYPE, cost_date, app.namespace)
+                    REGION, ENVIRONMENT, ENVIRONMENT_TYPE, cost_date,app["namespace"])
                 app.update(crd_cost)
 
             print(datetime.utcnow().strftime('%Y-%m-%d %H:%M:%S') +
