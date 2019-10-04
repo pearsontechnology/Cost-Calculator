@@ -198,7 +198,7 @@ def compute_total_minion_resources(corev1api):
     return (minion_total_cpu, minion_total_memory)
 
 
-def do_current_resource_usage_calcultaion(influx_client, k8sv1):
+def do_current_resource_usage_calcultaion(influx_client, k8sv1,excluded_ns_arr):
     namespace_usage_data = []
     try:
 
@@ -206,6 +206,14 @@ def do_current_resource_usage_calcultaion(influx_client, k8sv1):
         for namespace in api_responce_namespaces.items:
 
             namespace_name = namespace.metadata.name
+
+            if namespace_name in excluded_ns_arr:
+                print(datetime.utcnow().strftime('%Y-%m-%d %H:%M:%S') + ': ' +
+                  'Namespace "' + namespace_name +'" is excluded . Skipping ')
+                continue
+            else:
+                print(namespace_name)
+            
             namespace_pod_count = 0
             namespace_total_cpu_usage = 0
             namespace_total_memory_usage = 0
@@ -226,7 +234,7 @@ def do_current_resource_usage_calcultaion(influx_client, k8sv1):
                 "memory_usage": namespace_total_memory_usage,
                 "pod_count": namespace_pod_count
             })
-        insert_namespace_usage(influx_client, namespace_usage_data)
+        #insert_namespace_usage(influx_client, namespace_usage_data)
     except:
         print(traceback.format_exc())
         print(datetime.utcnow().strftime('%Y-%m-%d %H:%M:%S') +
@@ -272,10 +280,9 @@ def do_past_namespace_cost_calculation(REGION, ENVIRONMENT, ENVIRONMENT_TYPE, in
               ': ' + 'Past Cost Calculatoion Error')
     return
 
+
 # Main Procedure.
-
-
-def main_procedure(REGION, ENVIRONMENT, ENVIRONMENT_TYPE, HOST, PORT, USER, PASSWORD, DATABASE):
+def main_procedure(REGION, ENVIRONMENT, ENVIRONMENT_TYPE, HOST, PORT, USER, PASSWORD, DATABASE,EX_NS_ARR):
     
     retries = 30
     current_retry = 0
@@ -305,7 +312,7 @@ def main_procedure(REGION, ENVIRONMENT, ENVIRONMENT_TYPE, HOST, PORT, USER, PASS
     v1 = client.CoreV1Api()
     total_cluster_cost = get_cluster_cost_per_hour(
        cost_date.strftime("%Y-%m-%d"), REGION, ENVIRONMENT, ENVIRONMENT_TYPE)
-    do_current_resource_usage_calcultaion(influx_client, v1)
+    do_current_resource_usage_calcultaion(influx_client, v1,EX_NS_ARR)
     do_past_namespace_cost_calculation(
        REGION, ENVIRONMENT, ENVIRONMENT_TYPE, influx_client, cost_date, total_cluster_cost)
     return
