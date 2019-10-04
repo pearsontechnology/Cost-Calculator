@@ -16,7 +16,8 @@ REGION = os.environ['REGION'] if "REGION" in os.environ else "us-east-2"
 EXCLUDE_NAMESPACE = os.environ['EXCLUDE_NAMESPACE'] if "EXCLUDE_NAMESPACE" in os.environ else "kube-system:default:cost:couchbase:healthcheck-app:helm-controller:proxy:logging:efs:jaeger"
 EX_NS_ARR = EXCLUDE_NAMESPACE.split(":")
 
-print (HOST,PORT,USER,PASSWORD,DATABASE,ENVIRONMENT,REGION,ENVIRONMENT_TYPE,EX_NS_ARR)
+print (HOST,PORT,USER,PASSWORD,DATABASE,ENVIRONMENT,REGION,ENVIRONMENT_TYPE)
+print ("Excluded Namespaces :" + str(EX_NS_ARR))
 import time
 from datetime import datetime
 from application_cost import main_procedure
