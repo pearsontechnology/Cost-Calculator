@@ -43,10 +43,6 @@ def insert_cost_data(influx_client, app_cost_data, debug=True, influx_write=True
         return
     while retries < retry_limit:
         try:
-            if is_duplicate(influx_client,"application_cost",data[0]["tags"]["calc_date"],data[0]["fields"]["calc_hour"]):
-                print(datetime.utcnow().strftime('%Y-%m-%d %H:%M:%S') + ': ' +
-                    'Duplicate Application Cost Entry. Skipping')
-                return
             influx_client.write_points(data)
             print(datetime.utcnow().strftime('%Y-%m-%d %H:%M:%S') + ': ' +
                 'Cost Calculation(For This Hour) Inserted Successfully')
@@ -85,10 +81,6 @@ def insert_namespace_usage(influx_client, namespace_resource_data,debug=True, in
         return
     while retries < retry_limit:
         try:
-            if is_duplicate(influx_client,"namespace_resource_usage",data[0]["tags"]["calc_date"],data[0]["fields"]["calc_hour"]):
-                print(datetime.utcnow().strftime('%Y-%m-%d %H:%M:%S') + ': ' +
-                'Duplicate Resource Usage Entry. Skipping')
-                return
             influx_client.write_points(data)
             print(datetime.utcnow().strftime('%Y-%m-%d %H:%M:%S') + ': ' +
                 'Namespace Resource Usage (For This Hour) Inserted Successfully')
@@ -242,6 +234,12 @@ def compute_total_minion_resources(corev1api,debug=True):
 def do_current_resource_usage_calcultaion(influx_client, k8sv1,excluded_ns_arr,debug=True,influx_write=True):
     print(datetime.utcnow().strftime('%Y-%m-%d %H:%M:%S') + ': ' +
       'Starting Current Resource Usage Calculation')
+
+    now = datetime.now()
+    if is_duplicate(influx_client,"namespace_resource_usage",now.strftime("%Y-%m-%d"),now.hour):
+        print(datetime.utcnow().strftime('%Y-%m-%d %H:%M:%S') + ': ' +'Duplicate Resource Usage Entry. Skipping')
+        return
+
     namespace_usage_data = []
     try:
 
@@ -302,6 +300,12 @@ def do_past_namespace_cost_calculation(REGION, ENVIRONMENT, ENVIRONMENT_TYPE, in
             print(datetime.utcnow().strftime('%Y-%m-%d %H:%M:%S') + ': ' +
                   'Past data unavailable on ' + str(cost_date)+' . Skipping calculation')
         else:
+
+            data = app_cost_data[0]
+            if is_duplicate(influx_client,"application_cost",data["calc_date"],"'"+str(data["calc_hour"])+"'"):
+                print(datetime.utcnow().strftime('%Y-%m-%d %H:%M:%S') + ': ' + 'Duplicate Application Cost Entry. Skipping')
+                return
+                
             for app in app_cost_data:
                 app_cpu_cost = (CPU_RATIO/100.0 * total_cluster_cost) * \
                     (float(app["cpu_usage"]) / float(total_cpu_used))
@@ -358,7 +362,7 @@ def main_procedure(REGION, ENVIRONMENT, ENVIRONMENT_TYPE, HOST, PORT, USER, PASS
     v1 = client.CoreV1Api()
 
     total_cluster_cost = get_cluster_cost_per_hour(
-       cost_date.strftime("%Y-%m-%d"), REGION, ENVIRONMENT, ENVIRONMENT_TYPE,DEBUG)
+        cost_date.strftime("%Y-%m-%d"), REGION, ENVIRONMENT, ENVIRONMENT_TYPE,DEBUG)
 
     do_current_resource_usage_calcultaion(influx_client, v1,EX_NS_ARR,DEBUG,INFLUX_WRITE)
 
