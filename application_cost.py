@@ -11,7 +11,7 @@ from cluster_cost import get_cluster_cost_per_hour
 from crd_costs import crd_cost_by_namespace
 
 
-def insert_cost_data(influx_client, app_cost_data):
+def insert_cost_data(influx_client, app_cost_data, debug=True, influx_write=True):
     retries = 0
     retry_limit = 5
     data = []
@@ -32,13 +32,15 @@ def insert_cost_data(influx_client, app_cost_data):
         for key in app.keys():
             if key not in fields and key not in tags:
                 fields[key] = float(app[key])
-        pprint(fields)
         data.append({
             "measurement": "application_cost",
             "tags": tags,
             "fields": fields
         })
     
+    if not influx_write:
+        pprint(data)
+        return
     while retries < retry_limit:
         try:
             influx_client.write_points(data)
@@ -46,14 +48,15 @@ def insert_cost_data(influx_client, app_cost_data):
                 'Cost Calculation(For This Hour) Inserted Successfully')
             break
         except:
-            print(traceback.format_exc())
             print(datetime.utcnow().strftime(
                 '%Y-%m-%d %H:%M:%S') + ': ' + 'Data Insert Error. Retrying in 10 secounds')
+            if debug:
+                print(traceback.format_exc())
             retries += 1
             time.sleep(10)
 
 
-def insert_namespace_usage(influx_client, namespace_resource_data):
+def insert_namespace_usage(influx_client, namespace_resource_data,debug=True, influx_write=True):
     data = []
     now = datetime.now()
     retries = 0
@@ -73,7 +76,9 @@ def insert_namespace_usage(influx_client, namespace_resource_data):
                 "pod_count": int(app["pod_count"])
             }
         })
-
+    if not influx_write:
+        pprint(data)
+        return
     while retries < retry_limit:
         try:
             influx_client.write_points(data)
@@ -81,14 +86,15 @@ def insert_namespace_usage(influx_client, namespace_resource_data):
               'Namespace Resource Usage (For This Hour) Inserted Successfully')
             break
         except:
-            print(traceback.format_exc())
             print(datetime.utcnow().strftime(
                 '%Y-%m-%d %H:%M:%S') + ': ' + 'Data Insert Error. Retrying in 10 secounds')
+            if debug:
+                print(traceback.format_exc())
             retries += 1
             time.sleep(10)
 
 
-def get_resource_usage_by_date(influx_client, search_date):
+def get_resource_usage_by_date(influx_client, search_date,debug=True):
 
     result = None
     total_memory_used = 0
@@ -101,9 +107,10 @@ def get_resource_usage_by_date(influx_client, search_date):
         result = influx_client.query(query)
 
     except:
-        print(traceback.format_exc())
         print(datetime.utcnow().strftime(
-            '%Y-%m-%d %H:%M:%S') + ': ' + 'Data Read Error')
+            '%Y-%m-%d %H:%M:%S') + ': ' + 'Past Resource Usage Read Error')
+        if debug:
+            print(traceback.format_exc())
 
     if result is not None and result.error is None:
         result_list = list(result.get_points(
@@ -152,7 +159,7 @@ def cpu_mi_convert(cpu_str):
 
 
 # Goes through containers and calculated total pod resource usage
-def pod_total_resource(pod):
+def pod_total_resource(pod,debug=True):
     pod_cpu_usage = 0
     pod_memory_usage = 0
     default_cpu = "500m"
@@ -173,14 +180,15 @@ def pod_total_resource(pod):
                 else:
                     pod_memory_usage += memory_to_int(default_memory)
     except:
-        print(traceback.format_exc())
         print(datetime.utcnow().strftime('%Y-%m-%d %H:%M:%S') +
               ': ' + 'Pod resource calculation error ')
+        if debug:
+            print(traceback.format_exc())
     return (pod_cpu_usage, pod_memory_usage)
 
 
 # Calculate minion total available  compute resources
-def compute_total_minion_resources(corev1api):
+def compute_total_minion_resources(corev1api,debug=True):
     minion_total_cpu = 0
     minion_total_memory = 0
     try:
@@ -192,13 +200,16 @@ def compute_total_minion_resources(corev1api):
             minion_total_memory += memory_to_int(
                 node.status.capacity["memory"])
     except:
-        print(traceback.format_exc())
         print(datetime.utcnow().strftime('%Y-%m-%d %H:%M:%S') + ': ' +
               'Minion Total Resource Calculation Error (v1 -> listNodes)')
+        if debug:
+            print(traceback.format_exc())
     return (minion_total_cpu, minion_total_memory)
 
 
-def do_current_resource_usage_calcultaion(influx_client, k8sv1,excluded_ns_arr):
+def do_current_resource_usage_calcultaion(influx_client, k8sv1,excluded_ns_arr,debug=True,influx_write=True):
+    print(datetime.utcnow().strftime('%Y-%m-%d %H:%M:%S') + ': ' +
+      'Starting Current Resource Usage Calculation')
     namespace_usage_data = []
     try:
 
@@ -211,8 +222,6 @@ def do_current_resource_usage_calcultaion(influx_client, k8sv1,excluded_ns_arr):
                 print(datetime.utcnow().strftime('%Y-%m-%d %H:%M:%S') + ': ' +
                   'Namespace "' + namespace_name +'" is excluded . Skipping ')
                 continue
-            else:
-                print(namespace_name)
             
             namespace_pod_count = 0
             namespace_total_cpu_usage = 0
@@ -234,15 +243,18 @@ def do_current_resource_usage_calcultaion(influx_client, k8sv1,excluded_ns_arr):
                 "memory_usage": namespace_total_memory_usage,
                 "pod_count": namespace_pod_count
             })
-        #insert_namespace_usage(influx_client, namespace_usage_data)
+        insert_namespace_usage(influx_client, namespace_usage_data,debug,influx_write)
     except:
-        print(traceback.format_exc())
         print(datetime.utcnow().strftime('%Y-%m-%d %H:%M:%S') +
               ': ' + 'Namespace Resource Calculatoion Error')
+        if debug:
+            print(traceback.format_exc())
     return
 
 
-def do_past_namespace_cost_calculation(REGION, ENVIRONMENT, ENVIRONMENT_TYPE, influx_client, cost_date, total_cluster_cost):
+def do_past_namespace_cost_calculation(REGION, ENVIRONMENT, ENVIRONMENT_TYPE, influx_client, cost_date, total_cluster_cost,debug=True,influx_write=True):
+    print(datetime.utcnow().strftime('%Y-%m-%d %H:%M:%S') + ': ' +
+      'Starting Past Namespace Cost Calculation')
     # ratio 50:50. as percentage
     CPU_RATIO = 50
     MEMORY_RATIO = 100 - CPU_RATIO
@@ -252,7 +264,7 @@ def do_past_namespace_cost_calculation(REGION, ENVIRONMENT, ENVIRONMENT_TYPE, in
 
     try:
         app_cost_data, total_cpu_used, total_memory_used = get_resource_usage_by_date(
-            influx_client, cost_date)
+            influx_client, cost_date,debug)
 
         if len(app_cost_data) == 0:
             print(datetime.utcnow().strftime('%Y-%m-%d %H:%M:%S') + ': ' +
@@ -268,12 +280,12 @@ def do_past_namespace_cost_calculation(REGION, ENVIRONMENT, ENVIRONMENT_TYPE, in
                     "app_cost": app_total_cost
                 })
                 crd_cost = crd_cost_by_namespace(
-                    REGION, ENVIRONMENT, ENVIRONMENT_TYPE, cost_date,app["namespace"])
+                    REGION, ENVIRONMENT, ENVIRONMENT_TYPE, cost_date,app["namespace"],debug)
                 app.update(crd_cost)
 
             print(datetime.utcnow().strftime('%Y-%m-%d %H:%M:%S') +
                   ': ' + 'Starting to Insert Data')
-            insert_cost_data(influx_client, app_cost_data)
+            insert_cost_data(influx_client, app_cost_data,debug,influx_write)
     except:
         print(traceback.format_exc())
         print(datetime.utcnow().strftime('%Y-%m-%d %H:%M:%S') +
@@ -282,7 +294,7 @@ def do_past_namespace_cost_calculation(REGION, ENVIRONMENT, ENVIRONMENT_TYPE, in
 
 
 # Main Procedure.
-def main_procedure(REGION, ENVIRONMENT, ENVIRONMENT_TYPE, HOST, PORT, USER, PASSWORD, DATABASE,EX_NS_ARR):
+def main_procedure(REGION, ENVIRONMENT, ENVIRONMENT_TYPE, HOST, PORT, USER, PASSWORD, DATABASE,EX_NS_ARR,DEBUG=True,INFLUX_WRITE=True):
     
     retries = 30
     current_retry = 0
@@ -296,13 +308,15 @@ def main_procedure(REGION, ENVIRONMENT, ENVIRONMENT_TYPE, HOST, PORT, USER, PASS
             break
         except:
             current_retry += 1
-            print("Influxdb Connection Failed. Retrying in 60 Secounds")
+            print(datetime.utcnow().strftime('%Y-%m-%d %H:%M:%S'),": Influxdb Connection Failed. Retrying in 60 Secounds")
 
             if current_retry > retries:
                 #Add local persistance
                 return
             else:
                 time.sleep(60)
+    print(datetime.utcnow().strftime('%Y-%m-%d %H:%M:%S') + ': ' +
+          'Influxdb Availability Check Ended')
 
     print(datetime.utcnow().strftime('%Y-%m-%d %H:%M:%S') + ': ' +
       'Past Cost and Usage Calculation(For This Hour) Started')
@@ -310,9 +324,13 @@ def main_procedure(REGION, ENVIRONMENT, ENVIRONMENT_TYPE, HOST, PORT, USER, PASS
     cost_date = datetime.now() - timedelta(days=2)
     config.load_incluster_config()
     v1 = client.CoreV1Api()
+
     total_cluster_cost = get_cluster_cost_per_hour(
-       cost_date.strftime("%Y-%m-%d"), REGION, ENVIRONMENT, ENVIRONMENT_TYPE)
-    do_current_resource_usage_calcultaion(influx_client, v1,EX_NS_ARR)
+       cost_date.strftime("%Y-%m-%d"), REGION, ENVIRONMENT, ENVIRONMENT_TYPE,DEBUG)
+
+    do_current_resource_usage_calcultaion(influx_client, v1,EX_NS_ARR,DEBUG,INFLUX_WRITE)
+
     do_past_namespace_cost_calculation(
        REGION, ENVIRONMENT, ENVIRONMENT_TYPE, influx_client, cost_date, total_cluster_cost)
+
     return

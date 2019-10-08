@@ -3,9 +3,9 @@ from datetime import datetime, timedelta
 import os
 import traceback
 
-client = boto3.client('ce')
 
-def get_number_of_paas_per_region(region):
+
+def get_number_of_paas_per_region(region,debug=True):
     # Assumption : #of vpcs = #of paas
     ec2 = boto3.client('ec2', region_name=region)
     pass_count = 0
@@ -19,7 +19,8 @@ def get_number_of_paas_per_region(region):
         return pass_count
 
     except:
-        print (traceback.format_exc())
+        if debug:
+            print (traceback.format_exc())
         print (datetime.utcnow().strftime(
             '%Y-%m-%d %H:%M:%S') + ': ' + 'Error in Getting the number of paas')
         return 0
@@ -63,8 +64,9 @@ def get_name_tag_values(environment, environment_type, service):
         return formatted_name_tag_values
 
 
-def get_cost_and_usage(date, region, environment, environment_type, service):
-
+def get_cost_and_usage(date, region, environment, environment_type, service,debug=True):
+    
+    client = boto3.client('ce')
     str_start_date = date
     start_date = datetime.strptime(date, '%Y-%m-%d')
     end_date = start_date + timedelta(days=1)
@@ -126,18 +128,22 @@ def get_cost_and_usage(date, region, environment, environment_type, service):
         )
 
         unblended_cost = response['ResultsByTime'][0]['Groups'][0]['Metrics']['UnblendedCost']['Amount']
-        print  ('(' + service + '): $' + str(unblended_cost))
+        if debug:
+            print  ('(' + service + '): $' + str(unblended_cost))
         return float(unblended_cost)
 
     except:
-        print (traceback.format_exc())
+        if debug:
+            print (traceback.format_exc())
         print (datetime.utcnow().strftime(
             '%Y-%m-%d %H:%M:%S') + ': ' + 'Error in Getting the cost of ' + service + ', Region :' + region)
         return 0
 
 
-def get_cluster_cost(date, region, environment, environment_type):
-    print ('Unblended Costs of', date, environment, environment_type, region)
+def get_cluster_cost(date, region, environment, environment_type,debug=True):
+    print(datetime.utcnow().strftime('%Y-%m-%d %H:%M:%S') + ': ' +
+      'Starting Cluster Cost Calculation')
+    print (datetime.utcnow().strftime('%Y-%m-%d %H:%M:%S'),': Unblended Costs of ', date, environment, environment_type, region)
 
     total_cost = 0
     services = ['Amazon Elastic Compute Cloud - Compute', 'EC2 - Other', 'Amazon Elastic Load Balancing',
@@ -148,16 +154,16 @@ def get_cluster_cost(date, region, environment, environment_type):
         # Cloudwatch and CloudTrail costs will be divided among the number of PASS since it have no tags
         if service == 'AmazonCloudWatch' or service == 'AWS CloudTrail':
             cost_per_service = get_cost_and_usage(date, region, environment, environment_type,
-                                                  service) / get_number_of_paas_per_region(region)
+                                                  service,debug) / get_number_of_paas_per_region(region)
             print ('(' + service + ' - Per PAAS): ' + str(cost_per_service))
 
         else:
-            cost_per_service = get_cost_and_usage(date, region, environment, environment_type, service)
+            cost_per_service = get_cost_and_usage(date, region, environment, environment_type, service,debug)
 
         total_cost = total_cost + cost_per_service
 
-    print ('Total Cost For The Environment(For Day): $', str(total_cost))
+    print (datetime.utcnow().strftime('%Y-%m-%d %H:%M:%S'),': Total Cost For The Environment(For Day): $', str(total_cost))
     return total_cost
 
-def get_cluster_cost_per_hour(date, region, environment, environment_type):
-    return float(get_cluster_cost(date, region, environment, environment_type)) / 24.0
+def get_cluster_cost_per_hour(date, region, environment, environment_type,debug=True):
+    return float(get_cluster_cost(date, region, environment, environment_type,debug)) / 24.0

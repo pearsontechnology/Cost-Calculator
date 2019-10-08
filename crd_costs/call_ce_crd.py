@@ -3,7 +3,7 @@ import traceback
 from datetime import datetime, timedelta
 
 
-def call_ce_crd(date, region, services, tags):
+def call_ce_crd(date, region, services, tags,debug=True):
 
     client = boto3.client('ce')
     str_start_date = date.strftime('%Y-%m-%d')
@@ -55,13 +55,15 @@ def call_ce_crd(date, region, services, tags):
             )
 
             unblended_cost = response['ResultsByTime'][0]['Groups'][0]['Metrics']['UnblendedCost']['Amount']
-            print ("(" + service + "): $" + str(unblended_cost))
+            if debug:
+                print ("(" + service + "): $" + str(unblended_cost))
             return_cost += float(unblended_cost)
 
         except:
-            print (traceback.format_exc())
             print (datetime.utcnow().strftime(
                 '%Y-%m-%d %H:%M:%S') + ': ' + 'Error in Getting the cost of ' + service + ', Region :' + region)
+            if debug:
+                print (traceback.format_exc())
             return_cost += 0.0
 
     return float(return_cost) /24.0

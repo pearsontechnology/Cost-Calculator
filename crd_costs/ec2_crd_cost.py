@@ -8,7 +8,7 @@ from datetime import datetime,timedelta
 
 
 # tested with CB and Mongo
-def calc_ec2_based_crd_cost(date,region,environment, environment_type, namespace):
+def calc_ec2_based_crd_cost(date,region,environment, environment_type, namespace,debug=True):
 
     api_instance = kubernetes.client.CustomObjectsApi(kubernetes.client.ApiClient())
     group = 'prsn.io'
@@ -38,12 +38,14 @@ def calc_ec2_based_crd_cost(date,region,environment, environment_type, namespace
                     calc_name += "-" + environment
                     calc_name += "-" + environment_type
                     calculated_names.append(calc_name)
-                print(calculated_names)
-                return_obj[crd_plural] = call_ce_crd(date,region,services,calculated_names)
+                print(datetime.utcnow().strftime('%Y-%m-%d %H:%M:%S')," : ", calculated_names)
+                return_obj[crd_plural] = call_ce_crd(date,region,services,calculated_names,debug)
             else:
-                print("No resources. Skipping")
+                print(datetime.utcnow().strftime('%Y-%m-%d %H:%M:%S') + ': ' + crd_plural + 
+                  ' No Resources. Skipping')
         except Exception as e:
-            print(e)
+            if debug:
+                print(e)
             continue
 
     return return_obj
