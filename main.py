@@ -8,7 +8,7 @@ parser.add_argument('-dbp','--database_password',help="Influxdb password",type=s
 args = parser.parse_args()
 
 DEBUG = os.environ["DEBUG"] if "DEBUG" in os.environ else "true"
-INFLUX_WRITE = os.environ["INFLUX_WRITE"] if os.environ["INFLUX_WRITE"] in os.environ else "true"
+INFLUX_WRITE = os.environ["INFLUX_WRITE"] if "INFLUX_WRITE" in os.environ else "true"
 HOST = os.environ['DATABASE_HOST'] if "DATABASE_HOST" in os.environ else "localhost"
 PORT = os.environ['DATABASE_PORT'] if "DATABASE_PORT" in os.environ else 8086
 USER = os.environ['DATABASE_USER'] if "DATABASE_USER" in os.environ else "cost_admin"
