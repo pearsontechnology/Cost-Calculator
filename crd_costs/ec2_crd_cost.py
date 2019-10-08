@@ -42,7 +42,8 @@ def calc_ec2_based_crd_cost(date,region,environment, environment_type, namespace
                 return_obj[crd_plural] = call_ce_crd(date,region,services,calculated_names)
             else:
                 print("No resources. Skipping")
-        except ApiException:
+        except Exception as e:
+            print(e)
             continue
 
     return return_obj

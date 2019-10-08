@@ -39,8 +39,8 @@ def calc_neptune_crd_cost(date,region,environment, environment_type, namespace):
             return_obj[crd_plural] = call_ce_crd(date,region,services,calculated_names)
         else:
             print("No resources. Skipping")
-    except ApiException:
+    except Exception as e:
+        print(e)
         return_obj = {}
 
-    pprint(return_obj)
     return return_obj
