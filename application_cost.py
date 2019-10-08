@@ -43,6 +43,10 @@ def insert_cost_data(influx_client, app_cost_data, debug=True, influx_write=True
         return
     while retries < retry_limit:
         try:
+            if is_duplicate(influx_client,"application_cost",data[0]["tags"]["calc_date"],data[0]["fields"]["calc_hour"]):
+                print(datetime.utcnow().strftime('%Y-%m-%d %H:%M:%S') + ': ' +
+                    'Duplicate Application Cost Entry. Skipping')
+                return
             influx_client.write_points(data)
             print(datetime.utcnow().strftime('%Y-%m-%d %H:%M:%S') + ': ' +
                 'Cost Calculation(For This Hour) Inserted Successfully')
@@ -81,9 +85,13 @@ def insert_namespace_usage(influx_client, namespace_resource_data,debug=True, in
         return
     while retries < retry_limit:
         try:
+            if is_duplicate(influx_client,"namespace_resource_usage",data[0]["tags"]["calc_date"],data[0]["fields"]["calc_hour"]):
+                print(datetime.utcnow().strftime('%Y-%m-%d %H:%M:%S') + ': ' +
+                'Duplicate Resource Usage Entry. Skipping')
+                return
             influx_client.write_points(data)
             print(datetime.utcnow().strftime('%Y-%m-%d %H:%M:%S') + ': ' +
-              'Namespace Resource Usage (For This Hour) Inserted Successfully')
+                'Namespace Resource Usage (For This Hour) Inserted Successfully')
             break
         except:
             print(datetime.utcnow().strftime(
@@ -93,6 +101,30 @@ def insert_namespace_usage(influx_client, namespace_resource_data,debug=True, in
             retries += 1
             time.sleep(10)
 
+def is_duplicate(influx_client,measurement, calc_date,calc_hour,debug=True):
+
+    result = None
+    is_duplicate_insert = False
+    try:
+        query = "SELECT * FROM "+ measurement+" where calc_date = '" + calc_date + \
+            "' AND calc_hour = " + str(calc_hour)
+        result = influx_client.query(query)
+
+    except:
+        print(datetime.utcnow().strftime(
+            '%Y-%m-%d %H:%M:%S') + ': ' + 'Read Error')
+        if debug:
+            print(traceback.format_exc())
+
+    if result is not None and result.error is None:
+        result_list = list(result.get_points(measurement=measurement))
+        if len(result_list) > 0:
+            is_duplicate_insert = True
+        
+    elif result is not None and result.error is not None:
+        raise Exception("Influxdb Error :" + str(result.error))
+
+    return is_duplicate_insert
 
 def get_resource_usage_by_date(influx_client, search_date,debug=True):
 

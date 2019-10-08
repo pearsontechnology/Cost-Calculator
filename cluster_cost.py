@@ -143,7 +143,7 @@ def get_cost_and_usage(date, region, environment, environment_type, service,debu
 def get_cluster_cost(date, region, environment, environment_type,debug=True):
     print(datetime.utcnow().strftime('%Y-%m-%d %H:%M:%S') + ': ' +
       'Starting Cluster Cost Calculation')
-    print (datetime.utcnow().strftime('%Y-%m-%d %H:%M:%S'),': Unblended Costs of ', date, environment, environment_type, region)
+    print (datetime.utcnow().strftime('%Y-%m-%d %H:%M:%S') + ':Unblended Costs of ', date, environment, environment_type, region)
 
     total_cost = 0
     services = ['Amazon Elastic Compute Cloud - Compute', 'EC2 - Other', 'Amazon Elastic Load Balancing',
