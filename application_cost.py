@@ -9,7 +9,7 @@ import traceback
 from cluster_cost import get_cluster_cost_per_hour
 from crd_costs import crd_cost_by_namespace
 
-
+#Insert Application Cost Data to InfluxDB
 def insert_cost_data(influx_client, app_cost_data, debug=True, influx_write=True):
     retries = 0
     retry_limit = 5
@@ -54,7 +54,7 @@ def insert_cost_data(influx_client, app_cost_data, debug=True, influx_write=True
             retries += 1
             time.sleep(10)
 
-
+#Insert Namespace Usage data
 def insert_namespace_usage(influx_client, namespace_resource_data,debug=True, influx_write=True):
     data = []
     now = datetime.now()
@@ -92,6 +92,7 @@ def insert_namespace_usage(influx_client, namespace_resource_data,debug=True, in
             retries += 1
             time.sleep(10)
 
+#Get Past Resource Usage data from date
 def get_resource_usage_by_date(influx_client, search_date,debug=True):
 
     result = None
@@ -156,7 +157,7 @@ def cpu_mi_convert(cpu_str):
     return cpu
 
 
-# Goes through containers and calculated total pod resource usage
+# Goes through containers and calculates total pod resource usage
 def pod_total_resource(pod,debug=True):
     pod_cpu_usage = 0
     pod_memory_usage = 0
@@ -204,7 +205,7 @@ def compute_total_minion_resources(corev1api,debug=True):
             print(traceback.format_exc())
     return (minion_total_cpu, minion_total_memory)
 
-
+#Calculate Current Resource Data
 def do_current_resource_usage_calcultaion(influx_client, k8sv1,excluded_ns_arr,debug=True,influx_write=True):
     print(datetime.utcnow().strftime('%Y-%m-%d %H:%M:%S') + ': ' +
       'Starting Current Resource Usage Calculation')
@@ -250,7 +251,7 @@ def do_current_resource_usage_calcultaion(influx_client, k8sv1,excluded_ns_arr,d
             print(traceback.format_exc())
     return
 
-
+#Do calculation of the already collected usage data
 def do_past_namespace_cost_calculation(REGION, ENVIRONMENT, ENVIRONMENT_TYPE, influx_client, cost_date, total_cluster_cost,debug=True,influx_write=True):
     print(datetime.utcnow().strftime('%Y-%m-%d %H:%M:%S') + ': ' +
       'Starting Past Namespace Cost Calculation')
@@ -293,7 +294,7 @@ def do_past_namespace_cost_calculation(REGION, ENVIRONMENT, ENVIRONMENT_TYPE, in
     return
 
 
-# Main Procedure.
+# Main Procedure. Starting Point
 def main_procedure(REGION, ENVIRONMENT, ENVIRONMENT_TYPE,EX_NS_ARR,INFLUX_CLIENT,USAGE_DUP=False,COST_DUP=False,DEBUG=True,INFLUX_WRITE=True):
     
     print(datetime.utcnow().strftime('%Y-%m-%d %H:%M:%S') + ': ' +

@@ -5,10 +5,12 @@ from datetime import datetime,timedelta
 from influxdb import InfluxDBClient
 import traceback
 
+#Get DB password as argument
 parser = ArgumentParser()
 parser.add_argument('-dbp','--database_password',help="Influxdb password",type=str,default="mock")
 args = parser.parse_args()
 
+#Handling Environment Variables
 DEBUG = os.environ["DEBUG"] if "DEBUG" in os.environ else "true"
 INFLUX_WRITE = os.environ["INFLUX_WRITE"] if "INFLUX_WRITE" in os.environ else "true"
 HOST = os.environ['DATABASE_HOST'] if "DATABASE_HOST" in os.environ else "localhost"
@@ -24,6 +26,7 @@ EX_NS_ARR = EXCLUDE_NAMESPACE.split(":")
 DEBUG_BOOL = DEBUG == "true"
 INFLUX_WRITE_BOOL = INFLUX_WRITE == "true"
 
+#Checks if Namspace Usage and Application cost is already added
 def check_duplicates(influx_client):
     now = datetime.now()
     app_cost_date = now - timedelta(days=2)
@@ -31,6 +34,7 @@ def check_duplicates(influx_client):
     cost_duplicate = is_duplicate(influx_client,"application_cost",app_cost_date.strftime("%Y-%m-%d"),"'"+str(app_cost_date.hour)+"'")
     return usage_duplicate,cost_duplicate
 
+#Checks if an entry is already added
 def is_duplicate(influx_client,measurement, calc_date,calc_hour,debug=True):
     result = None
     is_duplicate_insert = False
@@ -51,6 +55,7 @@ def is_duplicate(influx_client,measurement, calc_date,calc_hour,debug=True):
         raise Exception("Influxdb Error :" + str(result.error))
     return is_duplicate_insert
 
+#Checks InfluxDB connection
 def influxdb_connection_check(influx_client,retry_limit):
     print(datetime.utcnow().strftime('%Y-%m-%d %H:%M:%S') + ': ' +'Influxdb Availability Check Started')
     current_retry = 0
@@ -82,9 +87,10 @@ print (datetime.utcnow().strftime('%Y-%m-%d %H:%M:%S') + ': ' + 'No Import Error
 influx_client = InfluxDBClient(HOST, PORT, USER, PASSWORD, DATABASE)
 is_startup = True
 
-
+#Main Loop
 while True:
     
+    #Run duplicate check only during startup
     if is_startup:
         if influxdb_connection_check(influx_client,30):
             usage,cost = check_duplicates(influx_client)
