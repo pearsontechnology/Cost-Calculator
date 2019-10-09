@@ -24,32 +24,6 @@ EX_NS_ARR = EXCLUDE_NAMESPACE.split(":")
 DEBUG_BOOL = DEBUG == "true"
 INFLUX_WRITE_BOOL = INFLUX_WRITE == "true"
 
-print (datetime.utcnow().strftime('%Y-%m-%d %H:%M:%S') + ': ' + 'Starting Cost Calculator')
-
-if DEBUG_BOOL:
-    print (HOST,PORT,USER,PASSWORD,DATABASE,ENVIRONMENT,REGION,ENVIRONMENT_TYPE)
-    print ("Excluded Namespaces :" + str(EX_NS_ARR))
-    print ("Operations Flag : DEBUG :" + str(DEBUG_BOOL))
-    print ("Operations Flag : ALLOW INFLUXDB WRITE :" + str(INFLUX_WRITE_BOOL))
-
-from application_cost import main_procedure
-
-print (datetime.utcnow().strftime('%Y-%m-%d %H:%M:%S') + ': ' + 'No Import Errors -> Running Procedure')
-
-influx_client = InfluxDBClient(HOST, PORT, USER, PASSWORD, DATABASE)
-
-usage = False
-cost = False
-
-if influxdb_connection_check(influx_client,30):
-    usage,cost = check_duplicates(influx_client)
-
-while True:
-    
-    if influxdb_connection_check(influx_client,30):
-        main_procedure(REGION,ENVIRONMENT,ENVIRONMENT_TYPE,EX_NS_ARR,influx_client,usage,cost,DEBUG_BOOL,INFLUX_WRITE_BOOL)
-    time.sleep(60*60)
-
 def check_duplicates(influx_client):
     now = datetime.now()
     app_cost_date = now - timedelta(days=2)
@@ -83,13 +57,41 @@ def influxdb_connection_check(influx_client,retry_limit):
     while True:
         try:
             influx_client.ping()
+            print(datetime.utcnow().strftime('%Y-%m-%d %H:%M:%S') + ': ' + 'Influxdb Availability Check Ended')
             return True
         except:
             current_retry += 1
             print(datetime.utcnow().strftime('%Y-%m-%d %H:%M:%S'),": Influxdb Connection Failed. Retrying in 60 Secounds")
             if current_retry > retry_limit:
-                #Add local persistance
                 return False
             else:
                 time.sleep(60)
-    print(datetime.utcnow().strftime('%Y-%m-%d %H:%M:%S') + ': ' + 'Influxdb Availability Check Ended')
+
+print (datetime.utcnow().strftime('%Y-%m-%d %H:%M:%S') + ': ' + 'Starting Cost Calculator')
+
+if DEBUG_BOOL:
+    print (HOST,PORT,USER,PASSWORD,DATABASE,ENVIRONMENT,REGION,ENVIRONMENT_TYPE)
+    print ("Excluded Namespaces :" + str(EX_NS_ARR))
+    print ("Operations Flag : DEBUG :" + str(DEBUG_BOOL))
+    print ("Operations Flag : ALLOW INFLUXDB WRITE :" + str(INFLUX_WRITE_BOOL))
+
+from application_cost import main_procedure
+
+print (datetime.utcnow().strftime('%Y-%m-%d %H:%M:%S') + ': ' + 'No Import Errors -> Running Procedure')
+
+influx_client = InfluxDBClient(HOST, PORT, USER, PASSWORD, DATABASE)
+is_startup = True
+
+
+while True:
+    
+    if is_startup:
+        if influxdb_connection_check(influx_client,30):
+            usage,cost = check_duplicates(influx_client)
+            main_procedure(REGION,ENVIRONMENT,ENVIRONMENT_TYPE,EX_NS_ARR,influx_client,usage,cost,DEBUG_BOOL,INFLUX_WRITE_BOOL)
+    else:
+        if influxdb_connection_check(influx_client,30):
+            main_procedure(REGION,ENVIRONMENT,ENVIRONMENT_TYPE,EX_NS_ARR,influx_client,False,False,DEBUG_BOOL,INFLUX_WRITE_BOOL)
+    is_startup = False
+    time.sleep(60*60)
+
