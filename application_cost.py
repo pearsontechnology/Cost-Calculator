@@ -3,7 +3,6 @@ import kubernetes
 from kubernetes import client, config
 from pprint import pprint
 import os
-from influxdb import InfluxDBClient
 from datetime import datetime, timedelta
 import time
 import traceback
@@ -92,31 +91,6 @@ def insert_namespace_usage(influx_client, namespace_resource_data,debug=True, in
                 print(traceback.format_exc())
             retries += 1
             time.sleep(10)
-
-def is_duplicate(influx_client,measurement, calc_date,calc_hour,debug=True):
-
-    result = None
-    is_duplicate_insert = False
-    try:
-        query = "SELECT * FROM "+ measurement+" where calc_date = '" + calc_date + \
-            "' AND calc_hour = " + str(calc_hour)
-        result = influx_client.query(query)
-
-    except:
-        print(datetime.utcnow().strftime(
-            '%Y-%m-%d %H:%M:%S') + ': ' + 'Read Error')
-        if debug:
-            print(traceback.format_exc())
-
-    if result is not None and result.error is None:
-        result_list = list(result.get_points(measurement=measurement))
-        if len(result_list) > 0:
-            is_duplicate_insert = True
-        
-    elif result is not None and result.error is not None:
-        raise Exception("Influxdb Error :" + str(result.error))
-
-    return is_duplicate_insert
 
 def get_resource_usage_by_date(influx_client, search_date,debug=True):
 
@@ -235,11 +209,6 @@ def do_current_resource_usage_calcultaion(influx_client, k8sv1,excluded_ns_arr,d
     print(datetime.utcnow().strftime('%Y-%m-%d %H:%M:%S') + ': ' +
       'Starting Current Resource Usage Calculation')
 
-    now = datetime.now()
-    if is_duplicate(influx_client,"namespace_resource_usage",now.strftime("%Y-%m-%d"),now.hour):
-        print(datetime.utcnow().strftime('%Y-%m-%d %H:%M:%S') + ': ' +'Duplicate Resource Usage Entry. Skipping')
-        return
-
     namespace_usage_data = []
     try:
 
@@ -301,11 +270,6 @@ def do_past_namespace_cost_calculation(REGION, ENVIRONMENT, ENVIRONMENT_TYPE, in
                   'Past data unavailable on ' + str(cost_date)+' . Skipping calculation')
         else:
 
-            data = app_cost_data[0]
-            if is_duplicate(influx_client,"application_cost",data["calc_date"],"'"+str(data["calc_hour"])+"'"):
-                print(datetime.utcnow().strftime('%Y-%m-%d %H:%M:%S') + ': ' + 'Duplicate Application Cost Entry. Skipping')
-                return
-                
             for app in app_cost_data:
                 app_cpu_cost = (CPU_RATIO/100.0 * total_cluster_cost) * \
                     (float(app["cpu_usage"]) / float(total_cpu_used))
@@ -330,30 +294,8 @@ def do_past_namespace_cost_calculation(REGION, ENVIRONMENT, ENVIRONMENT_TYPE, in
 
 
 # Main Procedure.
-def main_procedure(REGION, ENVIRONMENT, ENVIRONMENT_TYPE, HOST, PORT, USER, PASSWORD, DATABASE,EX_NS_ARR,DEBUG=True,INFLUX_WRITE=True):
+def main_procedure(REGION, ENVIRONMENT, ENVIRONMENT_TYPE,EX_NS_ARR,INFLUX_CLIENT,USAGE_DUP=False,COST_DUP=False,DEBUG=True,INFLUX_WRITE=True):
     
-    retries = 30
-    current_retry = 0
-
-    print(datetime.utcnow().strftime('%Y-%m-%d %H:%M:%S') + ': ' +
-          'Influxdb Availability Check Started')
-    influx_client = InfluxDBClient(HOST, PORT, USER, PASSWORD, DATABASE)
-    while True:
-        try:
-            influx_client.ping()
-            break
-        except:
-            current_retry += 1
-            print(datetime.utcnow().strftime('%Y-%m-%d %H:%M:%S'),": Influxdb Connection Failed. Retrying in 60 Secounds")
-
-            if current_retry > retries:
-                #Add local persistance
-                return
-            else:
-                time.sleep(60)
-    print(datetime.utcnow().strftime('%Y-%m-%d %H:%M:%S') + ': ' +
-          'Influxdb Availability Check Ended')
-
     print(datetime.utcnow().strftime('%Y-%m-%d %H:%M:%S') + ': ' +
       'Past Cost and Usage Calculation(For This Hour) Started')
       
@@ -361,12 +303,20 @@ def main_procedure(REGION, ENVIRONMENT, ENVIRONMENT_TYPE, HOST, PORT, USER, PASS
     config.load_incluster_config()
     v1 = client.CoreV1Api()
 
-    total_cluster_cost = get_cluster_cost_per_hour(
-        cost_date.strftime("%Y-%m-%d"), REGION, ENVIRONMENT, ENVIRONMENT_TYPE,DEBUG)
+    if USAGE_DUP:
+        print(datetime.utcnow().strftime('%Y-%m-%d %H:%M:%S') + ': ' +
+            'Namesapce Resource Usage Already Added. Skipping')
+    else:
+        do_current_resource_usage_calcultaion(INFLUX_CLIENT, v1,EX_NS_ARR,DEBUG,INFLUX_WRITE)
 
-    do_current_resource_usage_calcultaion(influx_client, v1,EX_NS_ARR,DEBUG,INFLUX_WRITE)
+    if COST_DUP:
+        print(datetime.utcnow().strftime('%Y-%m-%d %H:%M:%S') + ': ' +
+            'Namespace Cost Already Added. Skipping')
+    else:
+        total_cluster_cost = get_cluster_cost_per_hour(
+            cost_date.strftime("%Y-%m-%d"), REGION, ENVIRONMENT, ENVIRONMENT_TYPE,DEBUG)
 
-    do_past_namespace_cost_calculation(
-       REGION, ENVIRONMENT, ENVIRONMENT_TYPE, influx_client, cost_date, total_cluster_cost)
+        do_past_namespace_cost_calculation(
+           REGION, ENVIRONMENT, ENVIRONMENT_TYPE, INFLUX_CLIENT, cost_date, total_cluster_cost)
 
     return

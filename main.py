@@ -1,7 +1,9 @@
 import os
 from argparse import ArgumentParser
 import time
-from datetime import datetime
+from datetime import datetime,timedelta
+from influxdb import InfluxDBClient
+import traceback
 
 parser = ArgumentParser()
 parser.add_argument('-dbp','--database_password',help="Influxdb password",type=str,default="mock")
@@ -34,6 +36,60 @@ from application_cost import main_procedure
 
 print (datetime.utcnow().strftime('%Y-%m-%d %H:%M:%S') + ': ' + 'No Import Errors -> Running Procedure')
 
+influx_client = InfluxDBClient(HOST, PORT, USER, PASSWORD, DATABASE)
+
+usage = False
+cost = False
+
+if influxdb_connection_check(influx_client,30):
+    usage,cost = check_duplicates(influx_client)
+
 while True:
-    main_procedure(REGION,ENVIRONMENT,ENVIRONMENT_TYPE,HOST,PORT,USER,PASSWORD,DATABASE,EX_NS_ARR,DEBUG_BOOL,INFLUX_WRITE_BOOL)
+    
+    if influxdb_connection_check(influx_client,30):
+        main_procedure(REGION,ENVIRONMENT,ENVIRONMENT_TYPE,EX_NS_ARR,influx_client,usage,cost,DEBUG_BOOL,INFLUX_WRITE_BOOL)
     time.sleep(60*60)
+
+def check_duplicates(influx_client):
+    now = datetime.now()
+    app_cost_date = now - timedelta(days=2)
+    usage_duplicate = is_duplicate(influx_client,"namespace_resource_usage",now.strftime("%Y-%m-%d"),now.hour)
+    cost_duplicate = is_duplicate(influx_client,"application_cost",app_cost_date.strftime("%Y-%m-%d"),"'"+str(app_cost_date.hour)+"'")
+    return usage_duplicate,cost_duplicate
+
+def is_duplicate(influx_client,measurement, calc_date,calc_hour,debug=True):
+    result = None
+    is_duplicate_insert = False
+    try:
+        query = "SELECT * FROM "+ measurement+" where calc_date = '" + calc_date + \
+            "' AND calc_hour = " + str(calc_hour)
+        result = influx_client.query(query)
+    except:
+        print(datetime.utcnow().strftime(
+            '%Y-%m-%d %H:%M:%S') + ': ' + 'Read Error')
+        if debug:
+            print(traceback.format_exc())
+    if result is not None and result.error is None:
+        result_list = list(result.get_points(measurement=measurement))
+        if len(result_list) > 0:
+            is_duplicate_insert = True
+    elif result is not None and result.error is not None:
+        raise Exception("Influxdb Error :" + str(result.error))
+    return is_duplicate_insert
+
+def influxdb_connection_check(influx_client,retry_limit):
+    print(datetime.utcnow().strftime('%Y-%m-%d %H:%M:%S') + ': ' +'Influxdb Availability Check Started')
+    current_retry = 0
+    while True:
+        try:
+            influx_client.ping()
+            return True
+        except:
+            current_retry += 1
+            print(datetime.utcnow().strftime('%Y-%m-%d %H:%M:%S'),": Influxdb Connection Failed. Retrying in 60 Secounds")
+            if current_retry > retry_limit:
+                #Add local persistance
+                return False
+            else:
+                time.sleep(60)
+    print(datetime.utcnow().strftime('%Y-%m-%d %H:%M:%S') + ': ' + 'Influxdb Availability Check Ended')
