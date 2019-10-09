@@ -7,7 +7,7 @@ from call_ce_crd import call_ce_crd
 from datetime import datetime,timedelta
 
 
-def calc_rds_crd_cost(date,region,environment, environment_type, namespace):
+def calc_rds_crd_cost(date,region,environment, environment_type, namespace,debug=True):
 
     api_instance = kubernetes.client.CustomObjectsApi(kubernetes.client.ApiClient())
     group = 'prsn.io'
@@ -40,8 +40,11 @@ def calc_rds_crd_cost(date,region,environment, environment_type, namespace):
                 print(calculated_names)
                 return_obj[crd_plural] = call_ce_crd(date,region,services,calculated_names)
             else:
-                print("No resources. Skipping")
-        except ApiException:
+                print(datetime.utcnow().strftime('%Y-%m-%d %H:%M:%S') + ': ' + crd_plural + 
+                  ' No Resources. Skipping')
+        except Exception as e:
+            if debug:
+                print(e)
             continue
 
     return return_obj
