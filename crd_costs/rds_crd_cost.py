@@ -51,5 +51,4 @@ def calc_rds_crd_cost(date,region,environment, environment_type, namespace,debug
 
 def split_by_and_merge(delim,inputstr):
     splitarr = inputstr.split(delim)
-    print(splitarr)
     return ''.join(splitarr)

@@ -155,7 +155,8 @@ def get_cluster_cost(date, region, environment, environment_type,debug=True):
         if service == 'AmazonCloudWatch' or service == 'AWS CloudTrail':
             cost_per_service = get_cost_and_usage(date, region, environment, environment_type,
                                                   service,debug) / get_number_of_paas_per_region(region)
-            print ('(' + service + ' - Per PAAS): ' + str(cost_per_service))
+            if debug:
+                print ('(' + service + ' - Per PAAS): ' + str(cost_per_service))
 
         else:
             cost_per_service = get_cost_and_usage(date, region, environment, environment_type, service,debug)

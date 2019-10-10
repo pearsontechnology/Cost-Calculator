@@ -318,6 +318,6 @@ def main_procedure(REGION, ENVIRONMENT, ENVIRONMENT_TYPE,EX_NS_ARR,INFLUX_CLIENT
             cost_date.strftime("%Y-%m-%d"), REGION, ENVIRONMENT, ENVIRONMENT_TYPE,DEBUG)
 
         do_past_namespace_cost_calculation(
-           REGION, ENVIRONMENT, ENVIRONMENT_TYPE, INFLUX_CLIENT, cost_date, total_cluster_cost)
+           REGION, ENVIRONMENT, ENVIRONMENT_TYPE, INFLUX_CLIENT, cost_date, total_cluster_cost,DEBUG,INFLUX_WRITE)
 
     return
